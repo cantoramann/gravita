@@ -1,0 +1,30 @@
+[package]
+name = "gravita-physics"
+description = "A modular 2D physics engine for real-time games and simulations"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["physics", "2d", "rigid-body", "collision", "simulation"]
+categories = ["game-engines", "simulation"]
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[dependencies]
+gravita-math = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+criterion = { workspace = true }
+rand = { workspace = true }
+
+[[bench]]
+name = "simulation"
+harness = false
+
+[[bench]]
+name = "collision"
+harness = false

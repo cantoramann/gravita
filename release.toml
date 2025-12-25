@@ -1,0 +1,157 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# cargo-release configuration for Gravita
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Install: cargo install cargo-release
+#
+# INDEPENDENT VERSIONING WITH UMBRELLA CRATE
+# ------------------------------------------
+# Each crate maintains its own version. The `gravita` umbrella crate re-exports
+# all other crates and must be bumped when any dependency changes.
+#
+# Examples:
+#   cargo release -p gravita-math patch --execute      # Bump math 0.1.0 → 0.1.1
+#   cargo release -p gravita minor --execute           # Bump umbrella 0.1.0 → 0.2.0
+#   cargo release --workspace patch --execute          # Bump ALL crates (rare)
+#
+# Semantic Versioning:
+#   MAJOR (1.0.0) - Incompatible API changes
+#   MINOR (0.2.0) - Backward-compatible new features
+#   PATCH (0.1.1) - Backward-compatible bug fixes
+#
+# PUBLISHING ORDER (dependency order):
+#   1. gravita-math       (no deps)
+#   2. gravita-physics    (depends on math)
+#      gravita-renderer   (depends on math)
+#   3. gravita-collections (depends on math, renderer)
+#   4. gravita-input      (standalone)
+#      gravita-assets     (standalone)
+#   5. gravita-engine-core (depends on math, physics, renderer)
+#   6. gravita            (umbrella - ALWAYS LAST)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── Workspace Settings ───────────────────────────────────────────────────────
+
+[workspace]
+# CRITICAL: Enable independent versioning (each crate has its own version)
+independent = true
+
+# When a dependency is bumped, upgrade dependents' Cargo.toml references
+dependent-version = "upgrade"
+
+# Don't consolidate commits across crates
+consolidate-commits = false
+
+# ─── Global Release Settings ──────────────────────────────────────────────────
+
+# Only allow releases from main branch
+allow-branch = ["main"]
+
+# Commit message format
+pre-release-commit-message = "chore(release): {{crate_name}} v{{version}}"
+
+# Tag format: gravita-math-v0.1.0, gravita-physics-v0.2.0, etc.
+# Exception: umbrella crate uses just "v0.1.0"
+tag-prefix = "{{crate_name}}-"
+tag-name = "{{prefix}}v{{version}}"
+tag-message = "Release {{crate_name}} v{{version}}"
+
+# ─── Pre-release Validation ───────────────────────────────────────────────────
+
+pre-release-hook = ["./scripts/pre-release.sh", "{{crate_name}}", "{{version}}"]
+
+# ─── Publishable Crates (in dependency order) ─────────────────────────────────
+#
+# DEPENDENCY GRAPH:
+#
+#   gravita-math (no deps)
+#       │
+#       ├──→ gravita-physics
+#       │        │
+#       ├──→ gravita-renderer
+#       │        │
+#       │        └──→ gravita-collections
+#       │
+#       └──→ gravita-engine-core
+#                ↑
+#           [also depends on physics, renderer]
+#
+#   gravita-input (standalone)
+#   gravita-assets (standalone)
+#
+#   gravita (umbrella - depends on ALL, published LAST)
+#
+
+# Level 1: No dependencies
+[[package]]
+name = "gravita-math"
+publish = true
+
+# Level 2: Depends on math
+[[package]]
+name = "gravita-physics"
+publish = true
+
+[[package]]
+name = "gravita-renderer"
+publish = true
+
+# Level 3: Depends on renderer
+[[package]]
+name = "gravita-collections"
+publish = true
+
+# Standalone crates
+[[package]]
+name = "gravita-input"
+publish = true
+
+[[package]]
+name = "gravita-assets"
+publish = true
+
+# Level 4: Depends on multiple crates
+[[package]]
+name = "gravita-engine-core"
+publish = true
+
+# Level 5: UMBRELLA CRATE (published LAST, depends on all others)
+[[package]]
+name = "gravita"
+publish = true
+# Use simpler tag format for the main crate
+tag-prefix = ""
+tag-name = "v{{version}}"
+
+# ─── Non-publishable (Examples) ───────────────────────────────────────────────
+
+[[package]]
+name = "bouncing-balls"
+publish = false
+release = false
+
+[[package]]
+name = "rotating-rod"
+publish = false
+release = false
+
+[[package]]
+name = "stickman-walk"
+publish = false
+release = false
+
+[[package]]
+name = "gravity-arena"
+publish = false
+release = false
+
+[[package]]
+name = "tetris"
+publish = false
+release = false
+
+[[package]]
+name = "froggy-jump"
+publish = false
+release = false

@@ -1,0 +1,44 @@
+[package]
+name = "gravita"
+description = "A modular 2D physics engine and game framework for Rust"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords = ["physics", "game-engine", "2d", "simulation", "gamedev"]
+categories = ["game-engines", "simulation", "graphics"]
+readme = "README.md"
+
+[lints]
+workspace = true
+
+# Feature flags for selective imports
+[features]
+default = ["math", "physics", "renderer"]
+full = [
+    "math",
+    "physics",
+    "renderer",
+    "collections",
+    "engine-core",
+    "input",
+    "assets",
+]
+math = ["dep:gravita-math"]
+physics = ["dep:gravita-physics"]
+renderer = ["dep:gravita-renderer"]
+collections = ["dep:gravita-collections"]
+engine-core = ["dep:gravita-engine-core"]
+input = ["dep:gravita-input"]
+assets = ["dep:gravita-assets"]
+
+[dependencies]
+gravita-math = { workspace = true, optional = true }
+gravita-physics = { workspace = true, optional = true }
+gravita-renderer = { workspace = true, optional = true }
+gravita-collections = { workspace = true, optional = true }
+gravita-engine-core = { workspace = true, optional = true }
+gravita-input = { workspace = true, optional = true }
+gravita-assets = { workspace = true, optional = true }

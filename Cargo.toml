@@ -1,0 +1,143 @@
+[workspace]
+members = [
+    # Umbrella crate (re-exports all others)
+    "crates/gravita",
+
+    # Core crates
+    "crates/engine-core",
+    "crates/physics",
+    "crates/math",
+    "crates/renderer",
+    "crates/collections",
+    "crates/input",
+    "crates/assets",
+
+    # Examples (not published)
+    "examples/bouncing-balls",
+    "examples/rotating-rod",
+    "examples/stickman-walk",
+    "examples/gravity-arena",
+    "examples/tetris",
+    "examples/froggy-jump",
+]
+resolver = "2"
+
+[workspace.package]
+# Note: version is managed independently per-crate for granular releases
+authors = ["Can Toraman <toraman@usc.edu>"]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/cantoramann/gravita"
+homepage = "https://github.com/cantoramann/gravita"
+keywords = ["physics", "game-engine", "2d", "simulation", "gamedev"]
+categories = ["game-engines", "simulation", "graphics"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Workspace Dependencies
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMPORTANT: Both `path` AND `version` are required for crates.io publishing.
+# - `path` is used during local development
+# - `version` is used when published (path is stripped by cargo publish)
+#
+# When bumping a crate version, update the version here too!
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[workspace.dependencies]
+# Internal crates (path + version for publishing)
+gravita-math = { version = "0.1.0", path = "crates/math" }
+gravita-physics = { version = "0.1.0", path = "crates/physics" }
+gravita-renderer = { version = "0.1.0", path = "crates/renderer" }
+gravita-collections = { version = "0.1.0", path = "crates/collections" }
+gravita-engine-core = { version = "0.1.0", path = "crates/engine-core" }
+gravita-input = { version = "0.1.0", path = "crates/input" }
+gravita-assets = { version = "0.1.0", path = "crates/assets" }
+
+approx = "0.5"              # For floating point comparisons in tests
+criterion = "0.5"           # Benchmarking framework
+env_logger = "0.11"
+log = "0.4"
+pixels = "0.15"
+rand = "0.8"                # Random number generation
+winit = "0.30.12"           # Window management
+winit_input_helper = "0.17"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Workspace-wide lint configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[workspace.lints.rust]
+# Safety
+unsafe_code = "warn"
+# Documentation
+missing_docs = "warn"
+# Future compatibility
+rust_2024_compatibility = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+# ─── Correctness ───────────────────────────────────────────────────────────────
+correctness = { level = "deny", priority = -1 }
+
+# ─── Suspicious patterns ───────────────────────────────────────────────────────
+suspicious = { level = "warn", priority = -1 }
+
+# ─── Complexity ────────────────────────────────────────────────────────────────
+complexity = { level = "warn", priority = -1 }
+cognitive_complexity = "warn"
+
+# ─── Performance ───────────────────────────────────────────────────────────────
+perf = { level = "warn", priority = -1 }
+
+# ─── Style (pedantic subset) ───────────────────────────────────────────────────
+cloned_instead_of_copied = "warn"
+flat_map_option = "warn"
+fn_params_excessive_bools = "warn"
+if_not_else = "warn"
+implicit_clone = "warn"
+inconsistent_struct_constructor = "warn"
+manual_assert = "warn"
+manual_let_else = "warn"
+manual_ok_or = "warn"
+manual_string_new = "warn"
+match_bool = "warn"
+needless_for_each = "warn"
+needless_pass_by_value = "warn"
+redundant_closure_for_method_calls = "warn"
+semicolon_if_nothing_returned = "warn"
+uninlined_format_args = "warn"
+unnecessary_join = "warn"
+unnecessary_wraps = "warn"
+unnested_or_patterns = "warn"
+unused_self = "warn"
+
+# ─── Nursery (stable, useful lints) ────────────────────────────────────────────
+debug_assert_with_mut_call = "warn"
+empty_line_after_doc_comments = "warn"
+equatable_if_let = "warn"
+fallible_impl_from = "warn"
+imprecise_flops = "warn"
+iter_on_empty_collections = "warn"
+iter_on_single_items = "warn"
+iter_with_drain = "warn"
+mutex_integer = "warn"
+needless_collect = "warn"
+nonstandard_macro_braces = "warn"
+option_if_let_else = "warn"
+path_buf_push_overwrite = "warn"
+readonly_write_lock = "warn"
+redundant_clone = "warn"
+significant_drop_in_scrutinee = "warn"
+significant_drop_tightening = "warn"
+suboptimal_flops = "warn"
+trailing_empty_array = "warn"
+trivial_regex = "warn"
+type_repetition_in_bounds = "warn"
+unused_peekable = "warn"
+unused_rounding = "warn"
+use_self = "warn"
+
+# ─── Restriction (opt-in safety) ───────────────────────────────────────────────
+dbg_macro = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+todo = "warn"
+unimplemented = "warn"

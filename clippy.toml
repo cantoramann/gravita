@@ -1,0 +1,23 @@
+# Clippy configuration for Gravita
+# https://rust-lang.github.io/rust-clippy/master/index.html
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 25
+
+# Maximum function length
+too-many-lines-threshold = 100
+
+# Maximum function arguments
+too-many-arguments-threshold = 7
+
+# Minimum size for array to be considered "large"
+array-size-threshold = 512
+
+# Allow certain identifiers
+allowed-idents-below-min-chars = ["x", "y", "z", "i", "j", "n", "dt", "id"]
+
+# Type complexity threshold
+type-complexity-threshold = 250
+
+# Matches trigger threshold (for large match expressions)
+single-char-binding-names-threshold = 5

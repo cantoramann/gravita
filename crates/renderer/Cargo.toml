@@ -1,0 +1,17 @@
+[package]
+name = "gravita-renderer"
+description = "Minimal CPU-based 2D rendering utilities for prototyping and simple games"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["renderer", "2d", "graphics", "gamedev", "drawing"]
+categories = ["game-engines", "graphics", "rendering"]
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[dependencies]
+gravita-math = { workspace = true }

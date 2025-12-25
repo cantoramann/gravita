@@ -1,0 +1,29 @@
+## Rustfmt configuration tuned for a 2D game / physics engine codebase.
+## Goals:
+## - Keep physics/math expressions readable (100-column width).
+## - Prefer consistent, crate-level imports for engine-style modules.
+## - Aggressively format doc comments and macros so engine docs stay clean.
+
+edition = "2024"
+max_width = 100                  # Wide enough for math-heavy expressions, but still readable.
+comment_width = 100
+tab_spaces = 4
+newline_style = "Unix"
+use_small_heuristics = "Default"
+
+reorder_imports = true
+reorder_modules = true
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+
+remove_nested_parens = true
+merge_derives = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+format_code_in_doc_comments = true
+format_macro_matchers = true
+format_macro_bodies = true
+format_strings = true
+
+match_block_trailing_comma = true

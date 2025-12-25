@@ -1,0 +1,35 @@
+# cargo-tarpaulin configuration
+# https://github.com/xd009642/tarpaulin
+
+[default]
+# Workspace mode
+workspace = true
+
+# Exclude non-library code
+exclude-files = ["examples/*", "benches/*"]
+
+# Ignore test functions themselves
+ignore-tests = true
+
+# Test timeout (seconds per test)
+timeout = "120s"
+
+# Output directory
+output-dir = "target/coverage"
+
+# Skip cleaning (faster incremental runs)
+skip-clean = true
+
+# Engine (use ptrace on Linux, default on macOS)
+# engine = "ptrace"
+
+# Fail if coverage below threshold
+# fail-under = 60
+
+[ci]
+# CI-specific settings
+out = ["Xml", "Html"]
+output-dir = "target/coverage"
+ignore-tests = true
+workspace = true
+exclude-files = ["examples/*", "benches/*"]

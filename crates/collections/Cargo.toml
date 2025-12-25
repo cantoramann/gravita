@@ -1,0 +1,18 @@
+[package]
+name = "gravita-collections"
+description = "Pre-built game objects for rapid prototyping with Gravita"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["gamedev", "game-objects", "characters", "2d", "sprites"]
+categories = ["game-engines"]
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[dependencies]
+gravita-math = { workspace = true }
+gravita-renderer = { workspace = true }

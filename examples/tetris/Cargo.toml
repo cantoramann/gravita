@@ -1,0 +1,20 @@
+[package]
+name = "tetris"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "A visually stunning Tetris implementation with physics-inspired aesthetics"
+
+[[bin]]
+name = "tetris"
+path = "src/main.rs"
+
+[dependencies]
+gravita-math = { workspace = true }
+gravita-renderer = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+pixels = { workspace = true }
+winit = { workspace = true }
+winit_input_helper = { workspace = true }
+rand = "0.8"

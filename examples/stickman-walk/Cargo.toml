@@ -1,0 +1,23 @@
+[package]
+name = "stickman-walk"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "stickman_walk"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+gravita-math = { workspace = true }
+gravita-renderer = { workspace = true }
+gravita-collections = { workspace = true }
+
+env_logger = { workspace = true }
+log = { workspace = true }
+pixels = { workspace = true }
+winit = { workspace = true }
+winit_input_helper = { workspace = true }
+
+wasm-bindgen = "0.2"

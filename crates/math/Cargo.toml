@@ -1,0 +1,23 @@
+[package]
+name = "gravita-math"
+description = "Minimal 2D math primitives for game development and physics simulation"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["math", "vector", "2d", "gamedev", "geometry"]
+categories = ["mathematics", "game-engines"]
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "math"
+harness = false
