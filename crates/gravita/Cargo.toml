@@ -1,26 +1,30 @@
 [package]
 name = "gravita"
-description = "A modular 2D physics engine and game framework for Rust"
+description = "A modular 2D/3D physics engine and game framework for Rust"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-keywords = ["physics", "game-engine", "2d", "simulation", "gamedev"]
+keywords = ["physics", "game-engine", "3d", "simulation", "gamedev"]
 categories = ["game-engines", "simulation", "graphics"]
 readme = "README.md"
 
 [lints]
 workspace = true
 
-# Feature flags for selective imports
+# Feature flags for selective imports.
+# Note: `math` brings in both 2D and 3D types (Vec2/Vec3/Quat/Aabb/Aabb3/...).
+# `physics-3d` and `renderer-3d` are opt-in — the latter pulls in wgpu/winit.
 [features]
 default = ["math", "physics", "renderer"]
 full = [
     "math",
     "physics",
+    "physics-3d",
     "renderer",
+    "renderer-3d",
     "collections",
     "engine-core",
     "input",
@@ -28,7 +32,9 @@ full = [
 ]
 math = ["dep:gravita-math"]
 physics = ["dep:gravita-physics"]
+physics-3d = ["dep:gravita-physics-3d", "math"]
 renderer = ["dep:gravita-renderer"]
+renderer-3d = ["dep:gravita-renderer-3d", "math"]
 collections = ["dep:gravita-collections"]
 engine-core = ["dep:gravita-engine-core"]
 input = ["dep:gravita-input"]
@@ -37,7 +43,9 @@ assets = ["dep:gravita-assets"]
 [dependencies]
 gravita-math = { workspace = true, optional = true }
 gravita-physics = { workspace = true, optional = true }
+gravita-physics-3d = { workspace = true, optional = true }
 gravita-renderer = { workspace = true, optional = true }
+gravita-renderer-3d = { workspace = true, optional = true }
 gravita-collections = { workspace = true, optional = true }
 gravita-engine-core = { workspace = true, optional = true }
 gravita-input = { workspace = true, optional = true }

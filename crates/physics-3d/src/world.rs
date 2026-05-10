@@ -130,40 +130,84 @@ impl PhysicsWorld {
         }
     }
 
+    /// Apply normal impulse (with restitution) AND tangential friction
+    /// impulse (Coulomb cone) at the contact point. Uses at-point velocities
+    /// (including angular contribution) so torque is generated correctly.
     fn solve_velocity(bodies: &mut [RigidBody], contact: &mut Contact) {
-        // Below this normal-aligned closing speed, treat the impact as
-        // inelastic to avoid micro-bouncing.
+        // Below this normal closing speed, treat as inelastic to stop
+        // micro-bouncing on resting contacts.
         const RESTITUTION_SLOP: f32 = 0.5;
+        // Ignore tangential speeds below this when computing friction direction.
+        const TANGENT_EPSILON_SQ: f32 = 1e-6;
+
         let (ia, ib) = (contact.body_a, contact.body_b);
         debug_assert!(ia != ib);
-
-        let (a, b) = if ia < ib {
-            let (left, right) = bodies.split_at_mut(ib);
-            (&mut left[ia], &mut right[0])
-        } else {
-            let (left, right) = bodies.split_at_mut(ia);
-            (&mut right[0], &mut left[ib])
-        };
-
-        let rv = b.velocity - a.velocity;
-        let vn = rv.dot(contact.normal);
-        if vn > 0.0 {
-            return; // separating
-        }
+        let (a, b) = split_pair_mut(bodies, ia, ib);
 
         let inv_mass_sum = a.inv_mass() + b.inv_mass();
         if inv_mass_sum == 0.0 {
-            return;
+            return; // two infinite-mass bodies; nothing to do
+        }
+
+        // -------------------------------------------------------------------
+        // Normal impulse
+        // -------------------------------------------------------------------
+        let rv = b.velocity_at_point(contact.point) - a.velocity_at_point(contact.point);
+        let vn = rv.dot(contact.normal);
+        if vn > 0.0 {
+            return; // separating
         }
 
         let mut e = contact.restitution;
         if vn.abs() < RESTITUTION_SLOP {
             e = 0.0;
         }
-        let j = -(1.0 + e) * vn / inv_mass_sum;
-        let impulse = contact.normal * j;
-        a.apply_impulse(-impulse);
-        b.apply_impulse(impulse);
+
+        // Effective mass along the normal includes the angular contribution:
+        //   1/m_eff = 1/m_a + 1/m_b + (r_a × n)·I_a⁻¹·(r_a × n) + ...
+        let ra = contact.point - a.position;
+        let rb = contact.point - b.position;
+        let ra_n = ra.cross(contact.normal);
+        let rb_n = rb.cross(contact.normal);
+        let ang_a = component_dot(ra_n, a.inv_inertia(), ra_n);
+        let ang_b = component_dot(rb_n, b.inv_inertia(), rb_n);
+        let inv_m_eff_n = inv_mass_sum + ang_a + ang_b;
+        if inv_m_eff_n == 0.0 {
+            return;
+        }
+
+        let jn = -(1.0 + e) * vn / inv_m_eff_n;
+        let impulse_n = contact.normal * jn;
+        a.apply_impulse_at_point(-impulse_n, contact.point);
+        b.apply_impulse_at_point(impulse_n, contact.point);
+
+        // -------------------------------------------------------------------
+        // Friction impulse along the tangent (Coulomb cone)
+        // -------------------------------------------------------------------
+        let rv_after = b.velocity_at_point(contact.point) - a.velocity_at_point(contact.point);
+        let tangent = rv_after - contact.normal * rv_after.dot(contact.normal);
+        let t_len_sq = tangent.length_squared();
+        if t_len_sq < TANGENT_EPSILON_SQ {
+            return;
+        }
+        let tangent = tangent * (1.0 / t_len_sq.sqrt());
+
+        let ra_t = ra.cross(tangent);
+        let rb_t = rb.cross(tangent);
+        let ang_a_t = component_dot(ra_t, a.inv_inertia(), ra_t);
+        let ang_b_t = component_dot(rb_t, b.inv_inertia(), rb_t);
+        let inv_m_eff_t = inv_mass_sum + ang_a_t + ang_b_t;
+        if inv_m_eff_t == 0.0 {
+            return;
+        }
+
+        let jt_unclamped = -rv_after.dot(tangent) / inv_m_eff_t;
+        let mu = contact.friction;
+        // Coulomb cone: |jt| ≤ μ · |jn|.
+        let jt = jt_unclamped.clamp(-mu * jn.abs(), mu * jn.abs());
+        let impulse_t = tangent * jt;
+        a.apply_impulse_at_point(-impulse_t, contact.point);
+        b.apply_impulse_at_point(impulse_t, contact.point);
     }
 
     fn solve_position(
@@ -179,13 +223,7 @@ impl PhysicsWorld {
 
         let (ia, ib) = (contact.body_a, contact.body_b);
         debug_assert!(ia != ib);
-        let (a, b) = if ia < ib {
-            let (left, right) = bodies.split_at_mut(ib);
-            (&mut left[ia], &mut right[0])
-        } else {
-            let (left, right) = bodies.split_at_mut(ia);
-            (&mut right[0], &mut left[ib])
-        };
+        let (a, b) = split_pair_mut(bodies, ia, ib);
 
         let inv_mass_sum = a.inv_mass() + b.inv_mass();
         if inv_mass_sum == 0.0 {
@@ -195,6 +233,30 @@ impl PhysicsWorld {
             contact.normal * ((contact.penetration - SLOP).max(0.0) * position_correction / inv_mass_sum);
         a.position -= correction * a.inv_mass();
         b.position += correction * b.inv_mass();
+    }
+}
+
+/// Per-axis weighted dot product: `(a.x * w.x * b.x) + (a.y * w.y * b.y) + (a.z * w.z * b.z)`.
+///
+/// Used for the angular contribution to effective mass in the constraint
+/// solver. With a diagonal inertia tensor, `(r × n)·I⁻¹·(r × n)` reduces to
+/// this elementwise form.
+#[inline]
+fn component_dot(a: Vec3, w: Vec3, b: Vec3) -> f32 {
+    let xy = (a.x * w.x).mul_add(b.x, a.y * w.y * b.y);
+    (a.z * w.z).mul_add(b.z, xy)
+}
+
+/// Split a `&mut [T]` into two disjoint `&mut T` at indices `i ≠ j`.
+#[inline]
+fn split_pair_mut<T>(bodies: &mut [T], i: usize, j: usize) -> (&mut T, &mut T) {
+    debug_assert!(i != j);
+    if i < j {
+        let (left, right) = bodies.split_at_mut(j);
+        (&mut left[i], &mut right[0])
+    } else {
+        let (left, right) = bodies.split_at_mut(i);
+        (&mut right[0], &mut left[j])
     }
 }
 
@@ -261,6 +323,43 @@ mod tests {
             b.position.y > -1.0 && b.position.y < 1.0,
             "sphere should be near the floor, y={}",
             b.position.y
+        );
+    }
+
+    #[test]
+    fn friction_slows_tangential_motion_against_static_floor() {
+        // High-friction sphere on a high-friction static floor with tangential
+        // velocity should slow down over time. With low friction, it should not.
+        fn run(sphere_mu: f32, floor_mu: f32) -> f32 {
+            let mut w = PhysicsWorld::new();
+            w.add_body(
+                RigidBody::new(
+                    0,
+                    CollisionShape::Aabb(gravita_math::Aabb3::from_center_size(
+                        Vec3::new(0.0, -1.0, 0.0),
+                        Vec3::new(100.0, 1.0, 100.0),
+                    )),
+                )
+                .with_type(BodyType::Static)
+                .with_friction(floor_mu),
+            );
+            let mut ball = RigidBody::new(0, sphere_shape(0.5));
+            ball.position = Vec3::new(0.0, 0.0, 0.0); // resting on floor (slop will lift it up)
+            ball.velocity = Vec3::new(10.0, 0.0, 0.0);
+            ball.restitution = 0.0;
+            ball.linear_damping = 0.0;
+            ball.friction = sphere_mu;
+            let id = w.add_body(ball);
+            for _ in 0..120 {
+                w.step(1.0 / 60.0);
+            }
+            w.bodies()[id].velocity.length()
+        }
+        let high = run(0.9, 0.9);
+        let low = run(0.0, 0.0);
+        assert!(
+            high < low - 1.0,
+            "high-friction final speed ({high}) should be much less than low-friction ({low})"
         );
     }
 

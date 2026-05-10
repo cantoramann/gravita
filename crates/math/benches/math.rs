@@ -4,7 +4,10 @@
 //! Run with: `cargo bench -p gravita-math`
 
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
-use gravita_math::{Aabb, Circle, PI, Ray2D, Transform2D, Vec2, lerp, smooth_step};
+use gravita_math::{
+    Aabb, Aabb3, Circle, Obb, PI, Quat, Ray2D, Sphere, Transform2D, Transform3D, Vec2, Vec3,
+    lerp, smooth_step,
+};
 
 // ============================================================================
 // Vector Operations
@@ -192,6 +195,96 @@ fn bench_batch_operations(c: &mut Criterion) {
     group.finish();
 }
 
+// ============================================================================
+// 3D — Vec3, Quat, Transform3D, Aabb3, Sphere, Obb
+// ============================================================================
+
+fn bench_vec3(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Vec3");
+    let a = Vec3::new(1.0, 2.0, 3.0);
+    let b = Vec3::new(4.0, -2.0, 0.5);
+    group.bench_function("dot", |bench| bench.iter(|| black_box(a).dot(black_box(b))));
+    group.bench_function("cross", |bench| {
+        bench.iter(|| black_box(a).cross(black_box(b)));
+    });
+    group.bench_function("length", |bench| bench.iter(|| black_box(a).length()));
+    group.bench_function("normalize", |bench| {
+        bench.iter(|| black_box(a).normalize());
+    });
+    group.bench_function("distance", |bench| {
+        bench.iter(|| black_box(a).distance(black_box(b)));
+    });
+    group.bench_function("lerp", |bench| {
+        bench.iter(|| black_box(a).lerp(black_box(b), black_box(0.4)));
+    });
+    group.finish();
+}
+
+fn bench_quat(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Quat");
+    let q = Quat::from_axis_angle(Vec3::Y, PI / 4.0);
+    let r = Quat::from_axis_angle(Vec3::X, PI / 6.0);
+    let v = Vec3::new(1.0, 2.0, 3.0);
+    group.bench_function("from_axis_angle", |bench| {
+        bench.iter(|| Quat::from_axis_angle(black_box(Vec3::Y), black_box(PI / 4.0)));
+    });
+    group.bench_function("mul", |bench| bench.iter(|| black_box(q) * black_box(r)));
+    group.bench_function("rotate_vec", |bench| {
+        bench.iter(|| black_box(q).rotate_vec(black_box(v)));
+    });
+    group.bench_function("inverse", |bench| bench.iter(|| black_box(q).inverse()));
+    group.bench_function("normalize", |bench| bench.iter(|| black_box(q).normalize()));
+    group.finish();
+}
+
+fn bench_transform3d(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Transform3D");
+    let t = Transform3D::IDENTITY
+        .with_position(Vec3::new(1.0, 2.0, 3.0))
+        .with_rotation(Quat::from_axis_angle(Vec3::Y, PI / 4.0))
+        .with_scale(Vec3::new(2.0, 1.0, 1.0));
+    let p = Vec3::new(0.5, 0.5, 0.5);
+    group.bench_function("transform_point", |bench| {
+        bench.iter(|| black_box(t).transform_point(black_box(p)));
+    });
+    group.bench_function("to_matrix", |bench| {
+        bench.iter(|| black_box(t).to_matrix());
+    });
+    group.bench_function("combine", |bench| {
+        bench.iter(|| black_box(t).combine(&black_box(t)));
+    });
+    group.finish();
+}
+
+fn bench_aabb3_sphere_obb(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Geometry3D");
+    let a = Aabb3::new(Vec3::ZERO, Vec3::splat(2.0));
+    let b = Aabb3::new(Vec3::splat(1.0), Vec3::splat(3.0));
+    let p = Vec3::new(0.5, 0.5, 0.5);
+    group.bench_function("aabb3_intersects", |bench| {
+        bench.iter(|| black_box(a).intersects(&black_box(b)));
+    });
+    group.bench_function("aabb3_closest_point", |bench| {
+        bench.iter(|| black_box(a).closest_point(black_box(p)));
+    });
+
+    let s1 = Sphere::new(Vec3::ZERO, 1.0);
+    let s2 = Sphere::new(Vec3::splat(1.5), 1.0);
+    group.bench_function("sphere_intersects", |bench| {
+        bench.iter(|| black_box(s1).intersects_sphere(&black_box(s2)));
+    });
+    group.bench_function("sphere_aabb_intersects", |bench| {
+        bench.iter(|| black_box(s1).intersects_aabb(&black_box(a)));
+    });
+
+    let o = Obb::new(Vec3::ZERO, Vec3::splat(1.0), Quat::IDENTITY);
+    group.bench_function("obb_closest_point", |bench| {
+        bench.iter(|| black_box(o).closest_point(black_box(p)));
+    });
+    group.bench_function("obb_corners", |bench| bench.iter(|| black_box(o).corners()));
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_vec2_operations,
@@ -201,6 +294,10 @@ criterion_group!(
     bench_circle_operations,
     bench_ray_operations,
     bench_batch_operations,
+    bench_vec3,
+    bench_quat,
+    bench_transform3d,
+    bench_aabb3_sphere_obb,
 );
 
 criterion_main!(benches);

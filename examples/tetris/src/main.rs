@@ -12,7 +12,7 @@
 use std::time::Instant;
 
 use gravita_math::{Vec2, lerp};
-use gravita_renderer::text as renderer_text;
+use gravita_renderer::{blend_pixel, text as renderer_text};
 use pixels::{Pixels, SurfaceTexture};
 use rand::Rng;
 use winit::{
@@ -1132,22 +1132,14 @@ impl TetrisGame {
         let size = CELL_SIZE as i32;
         let inset = 1;
 
-        // Draw glow effect first
+        // Draw glow effect first (15% alpha around the cell).
         let glow_size = 3;
+        let glow = [color[0], color[1], color[2], 38]; // 0.15 * 255 ≈ 38
         for gy in (y0 - glow_size).max(0)..(y0 + size + glow_size).min(HEIGHT as i32) {
             for gx in (x0 - glow_size).max(0)..(x0 + size + glow_size).min(WIDTH as i32) {
                 let in_cell = gx >= x0 && gx < x0 + size && gy >= y0 && gy < y0 + size;
                 if !in_cell {
-                    let idx = ((gy as u32 * WIDTH + gx as u32) * 4) as usize;
-                    if idx + 3 < frame.len() {
-                        let alpha = 0.15;
-                        frame[idx] =
-                            (frame[idx] as f32 * (1.0 - alpha) + color[0] as f32 * alpha) as u8;
-                        frame[idx + 1] =
-                            (frame[idx + 1] as f32 * (1.0 - alpha) + color[1] as f32 * alpha) as u8;
-                        frame[idx + 2] =
-                            (frame[idx + 2] as f32 * (1.0 - alpha) + color[2] as f32 * alpha) as u8;
-                    }
+                    blend_pixel(frame, gx, gy, WIDTH, HEIGHT, glow);
                 }
             }
         }
@@ -1235,19 +1227,12 @@ impl TetrisGame {
         let size = CELL_SIZE as i32;
         let inset = 2;
 
-        // Draw semi-transparent fill
+        // Draw semi-transparent fill (multiply source alpha by 0.3).
+        let fill_alpha = ((color[3] as f32 * 0.3) as u8).max(1);
+        let fill = [color[0], color[1], color[2], fill_alpha];
         for y in (y0 + inset).max(0)..(y0 + size - inset).min(HEIGHT as i32) {
             for x in (x0 + inset).max(0)..(x0 + size - inset).min(WIDTH as i32) {
-                let idx = ((y as u32 * WIDTH + x as u32) * 4) as usize;
-                if idx + 3 < frame.len() {
-                    let alpha = color[3] as f32 / 255.0 * 0.3;
-                    frame[idx] =
-                        (frame[idx] as f32 * (1.0 - alpha) + color[0] as f32 * alpha) as u8;
-                    frame[idx + 1] =
-                        (frame[idx + 1] as f32 * (1.0 - alpha) + color[1] as f32 * alpha) as u8;
-                    frame[idx + 2] =
-                        (frame[idx + 2] as f32 * (1.0 - alpha) + color[2] as f32 * alpha) as u8;
-                }
+                blend_pixel(frame, x, y, WIDTH, HEIGHT, fill);
             }
         }
 
@@ -1256,41 +1241,13 @@ impl TetrisGame {
         // Top & bottom
         for x in (x0 + inset).max(0)..(x0 + size - inset).min(WIDTH as i32) {
             for &y in &[y0 + inset, y0 + size - inset - 1] {
-                if y >= 0 && y < HEIGHT as i32 {
-                    let idx = ((y as u32 * WIDTH + x as u32) * 4) as usize;
-                    if idx + 3 < frame.len() {
-                        let alpha = outline_color[3] as f32 / 255.0;
-                        frame[idx] = (frame[idx] as f32 * (1.0 - alpha)
-                            + outline_color[0] as f32 * alpha)
-                            as u8;
-                        frame[idx + 1] = (frame[idx + 1] as f32 * (1.0 - alpha)
-                            + outline_color[1] as f32 * alpha)
-                            as u8;
-                        frame[idx + 2] = (frame[idx + 2] as f32 * (1.0 - alpha)
-                            + outline_color[2] as f32 * alpha)
-                            as u8;
-                    }
-                }
+                blend_pixel(frame, x, y, WIDTH, HEIGHT, outline_color);
             }
         }
         // Left & right
         for y in (y0 + inset).max(0)..(y0 + size - inset).min(HEIGHT as i32) {
             for &x in &[x0 + inset, x0 + size - inset - 1] {
-                if x >= 0 && x < WIDTH as i32 {
-                    let idx = ((y as u32 * WIDTH + x as u32) * 4) as usize;
-                    if idx + 3 < frame.len() {
-                        let alpha = outline_color[3] as f32 / 255.0;
-                        frame[idx] = (frame[idx] as f32 * (1.0 - alpha)
-                            + outline_color[0] as f32 * alpha)
-                            as u8;
-                        frame[idx + 1] = (frame[idx + 1] as f32 * (1.0 - alpha)
-                            + outline_color[1] as f32 * alpha)
-                            as u8;
-                        frame[idx + 2] = (frame[idx + 2] as f32 * (1.0 - alpha)
-                            + outline_color[2] as f32 * alpha)
-                            as u8;
-                    }
-                }
+                blend_pixel(frame, x, y, WIDTH, HEIGHT, outline_color);
             }
         }
     }
@@ -1369,23 +1326,13 @@ impl TetrisGame {
             let x0 = cx + dx * scale;
             let y0 = cy + dy * scale;
 
-            // Mini glow
+            // Mini glow (20% alpha around the cell).
+            let glow = [color[0], color[1], color[2], 51]; // 0.2 * 255 ≈ 51
             for gy in (y0 - 1).max(0)..(y0 + scale + 1).min(HEIGHT as i32) {
                 for gx in (x0 - 1).max(0)..(x0 + scale + 1).min(WIDTH as i32) {
                     let in_cell = gx >= x0 && gx < x0 + scale && gy >= y0 && gy < y0 + scale;
                     if !in_cell {
-                        let idx = ((gy as u32 * WIDTH + gx as u32) * 4) as usize;
-                        if idx + 3 < frame.len() {
-                            let alpha = 0.2;
-                            frame[idx] =
-                                (frame[idx] as f32 * (1.0 - alpha) + color[0] as f32 * alpha) as u8;
-                            frame[idx + 1] = (frame[idx + 1] as f32 * (1.0 - alpha)
-                                + color[1] as f32 * alpha)
-                                as u8;
-                            frame[idx + 2] = (frame[idx + 2] as f32 * (1.0 - alpha)
-                                + color[2] as f32 * alpha)
-                                as u8;
-                        }
+                        blend_pixel(frame, gx, gy, WIDTH, HEIGHT, glow);
                     }
                 }
             }
@@ -1468,15 +1415,12 @@ impl TetrisGame {
     }
 
     fn draw_panel_bg(&self, frame: &mut [u8], x: i32, y: i32, w: i32, h: i32) {
+        // Darken the background with a 30%-alpha dark-blue tint to mark the panel area.
+        // Source color: (0, 0, 20) at alpha 0.3 ≈ 77/255.
+        let tint = [0, 0, 20, 77];
         for py in y.max(0)..(y + h).min(HEIGHT as i32) {
             for px in x.max(0)..(x + w).min(WIDTH as i32) {
-                let idx = ((py as u32 * WIDTH + px as u32) * 4) as usize;
-                if idx + 3 < frame.len() {
-                    let alpha = 0.3;
-                    frame[idx] = (frame[idx] as f32 * (1.0 - alpha)) as u8;
-                    frame[idx + 1] = (frame[idx + 1] as f32 * (1.0 - alpha)) as u8;
-                    frame[idx + 2] = (frame[idx + 2] as f32 * (1.0 - alpha) + 20.0 * alpha) as u8;
-                }
+                blend_pixel(frame, px, py, WIDTH, HEIGHT, tint);
             }
         }
     }

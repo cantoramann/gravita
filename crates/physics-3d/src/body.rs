@@ -1,6 +1,6 @@
 // physics-3d/src/body.rs
 
-use gravita_math::{Aabb3, Quat, Sphere, Vec3};
+use gravita_math::{Aabb3, Obb, Quat, Sphere, Vec3};
 
 /// How a body participates in the simulation.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -18,19 +18,21 @@ pub enum BodyType {
 pub enum CollisionShape {
     /// Sphere.
     Sphere(Sphere),
-    /// Axis-aligned box in body-local space (rotation not applied to its
-    /// bounds — for v0.1 this is effectively a non-rotating box).
+    /// World-axis-aligned box.
     Aabb(Aabb3),
+    /// Oriented bounding box in body-local space. `center` and `rotation` are
+    /// relative to the body — they're combined with the body's position/
+    /// rotation at collision time.
+    Obb(Obb),
 }
 
 impl CollisionShape {
-    /// Tight world-space AABB after translating by `position`. Rotation is
-    /// ignored for spheres (rotationally symmetric) and for AABBs in v0.1
-    /// (true OBB support is future work).
+    /// Tight world-space AABB after translating by `position`.
     pub fn world_aabb(&self, position: Vec3) -> Aabb3 {
         match self {
             Self::Sphere(s) => Sphere::new(position + s.center, s.radius).to_aabb(),
             Self::Aabb(b) => b.translate(position),
+            Self::Obb(o) => Obb::new(o.center + position, o.half_extents, o.rotation).to_aabb(),
         }
     }
 
@@ -44,6 +46,14 @@ impl CollisionShape {
                     && b.min.z < b.max.z
                     && b.min.x.is_finite()
                     && b.max.z.is_finite()
+            },
+            Self::Obb(o) => {
+                o.half_extents.x > 0.0
+                    && o.half_extents.y > 0.0
+                    && o.half_extents.z > 0.0
+                    && o.half_extents.x.is_finite()
+                    && o.half_extents.y.is_finite()
+                    && o.half_extents.z.is_finite()
             },
         }
     }
@@ -59,6 +69,7 @@ impl CollisionShape {
                 let size = b.size();
                 density * size.x * size.y * size.z
             },
+            Self::Obb(o) => density * 8.0 * o.half_extents.x * o.half_extents.y * o.half_extents.z,
         }
     }
 
@@ -74,6 +85,19 @@ impl CollisionShape {
             Self::Aabb(b) => {
                 let size = b.size();
                 let (w, h, d) = (size.x, size.y, size.z);
+                let k = mass / 12.0;
+                Vec3::new(
+                    k * h.mul_add(h, d * d),
+                    k * w.mul_add(w, d * d),
+                    k * w.mul_add(w, h * h),
+                )
+            },
+            Self::Obb(o) => {
+                let (w, h, d) = (
+                    o.half_extents.x * 2.0,
+                    o.half_extents.y * 2.0,
+                    o.half_extents.z * 2.0,
+                );
                 let k = mass / 12.0;
                 Vec3::new(
                     k * h.mul_add(h, d * d),
@@ -300,6 +324,23 @@ impl RigidBody {
     /// World-space AABB for broad-phase queries.
     pub fn world_aabb(&self) -> Aabb3 {
         self.shape.world_aabb(self.position)
+    }
+
+    /// Linear velocity at the world-space point `p`, including the angular
+    /// contribution `ω × r` where `r = p − position`.
+    #[inline]
+    #[must_use]
+    pub fn velocity_at_point(&self, p: Vec3) -> Vec3 {
+        let r = p - self.position;
+        self.velocity + self.angular_velocity.cross(r)
+    }
+
+    /// Inverse inertia tensor (diagonal). `0` per-axis for non-dynamic bodies
+    /// or for axes locked by fixed rotation.
+    #[inline]
+    #[must_use]
+    pub fn inv_inertia(&self) -> Vec3 {
+        self.inv_inertia
     }
 
     /// Clear accumulated forces and torque. Called by the world each step.

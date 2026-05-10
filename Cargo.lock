@@ -841,7 +841,9 @@ dependencies = [
  "gravita-input",
  "gravita-math",
  "gravita-physics",
+ "gravita-physics-3d",
  "gravita-renderer",
+ "gravita-renderer-3d",
 ]
 
 [[package]]
@@ -901,6 +903,7 @@ dependencies = [
 name = "gravita-physics-3d"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "gravita-math",
 ]
 

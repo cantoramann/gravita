@@ -1,6 +1,6 @@
 //! 3D rigid body physics for the Gravita engine.
 //!
-//! Mirrors the structure of [`gravita_physics`] but works in 3D using
+//! Mirrors the structure of `gravita_physics` but works in 3D using
 //! [`Vec3`](gravita_math::Vec3) and [`Quat`](gravita_math::Quat) for state.
 //!
 //! # What's included
@@ -23,6 +23,8 @@
 
 /// 3D rigid body and collision shape types.
 pub mod body;
+/// 3D broad-phase strategies (spatial hash grid).
+pub mod broad_phase;
 /// 3D collision detection (narrow phase + simple detector).
 pub mod collision;
 /// Numerical integrators with quaternion-based rotation.
@@ -31,6 +33,7 @@ pub mod integrator;
 pub mod world;
 
 pub use body::{BodyType, CollisionShape, RigidBody};
-pub use collision::{Contact, SimpleCollisionDetector};
+pub use broad_phase::{BroadPhase, SpatialHashGrid};
+pub use collision::{Contact, SimpleCollisionDetector, SpatialHashDetector};
 pub use integrator::{Integrator, SemiImplicitEuler};
 pub use world::PhysicsWorld;

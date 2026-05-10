@@ -2,7 +2,6 @@
 name = "gravita-physics-3d"
 description = "3D rigid body physics for the Gravita engine"
 version = "0.1.0"
-publish = false
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -15,3 +14,10 @@ workspace = true
 
 [dependencies]
 gravita-math = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "sim_3d"
+harness = false

@@ -1,8 +1,7 @@
 [package]
 name = "gravita-renderer-3d"
-description = "Internal: wgpu-based 3D renderer + winit runner used by Gravita 3D examples"
+description = "wgpu-based 3D renderer + winit runner for the Gravita engine"
 version = "0.1.0"
-publish = false
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

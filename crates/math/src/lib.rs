@@ -33,6 +33,8 @@ pub mod aabb;
 pub mod aabb3;
 /// 2D circle primitive.
 pub mod circle;
+/// Oriented bounding box in 3D.
+pub mod obb;
 /// Unit quaternion for 3D rotation.
 pub mod quat;
 /// 2D ray + intersection tests.
@@ -58,6 +60,7 @@ pub use std::f32::consts::{PI, TAU};
 pub use aabb::Aabb;
 pub use aabb3::Aabb3;
 pub use circle::Circle;
+pub use obb::Obb;
 pub use quat::Quat;
 pub use ray::{Ray2D, RayHit};
 pub use ray3::{Ray3D, RayHit3D};

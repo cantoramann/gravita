@@ -158,7 +158,7 @@ impl App3D for Demo {
             let body = &self.world.bodies()[id];
             let r = match &body.shape {
                 CollisionShape::Sphere(s) => s.radius,
-                CollisionShape::Aabb(_) => 0.5,
+                CollisionShape::Aabb(_) | CollisionShape::Obb(_) => 0.5,
             };
             let tint = palette(i);
             instances.push(Instance {
