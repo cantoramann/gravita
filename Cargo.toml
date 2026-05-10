@@ -14,6 +14,7 @@ members = [
 
     # Internal (publish = false)
     "crates/example-shim",
+    "crates/renderer-3d",
 
     # Examples (not published)
     "examples/bouncing-balls",
@@ -22,6 +23,7 @@ members = [
     "examples/gravity-arena",
     "examples/tetris",
     "examples/froggy-jump",
+    "examples/cube-3d",
 ]
 resolver = "2"
 
@@ -55,6 +57,7 @@ gravita-engine-core = { version = "0.1.0", path = "crates/engine-core" }
 gravita-input = { version = "0.1.0", path = "crates/input" }
 gravita-assets = { version = "0.1.0", path = "crates/assets" }
 gravita-example-shim = { path = "crates/example-shim" }
+gravita-renderer-3d = { path = "crates/renderer-3d" }
 
 approx = "0.5"              # For floating point comparisons in tests
 criterion = "0.5"           # Benchmarking framework

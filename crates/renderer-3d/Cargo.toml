@@ -1,0 +1,22 @@
+[package]
+name = "gravita-renderer-3d"
+description = "Internal: wgpu-based 3D renderer + winit runner used by Gravita 3D examples"
+version = "0.1.0"
+publish = false
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+gravita-math = { workspace = true }
+
+bytemuck = { version = "1.16", features = ["derive"] }
+env_logger = { workspace = true }
+log = { workspace = true }
+pollster = "0.3"
+wgpu = "0.19"
+winit = { workspace = true }
