@@ -1,0 +1,10 @@
+[package]
+name = "spheres-3d"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+gravita-math = { workspace = true }
+gravita-physics-3d = { workspace = true }
+gravita-renderer-3d = { workspace = true }

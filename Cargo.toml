@@ -6,6 +6,7 @@ members = [
     # Core crates
     "crates/engine-core",
     "crates/physics",
+    "crates/physics-3d",
     "crates/math",
     "crates/renderer",
     "crates/collections",
@@ -24,6 +25,7 @@ members = [
     "examples/tetris",
     "examples/froggy-jump",
     "examples/cube-3d",
+    "examples/spheres-3d",
 ]
 resolver = "2"
 
@@ -51,6 +53,7 @@ categories = ["game-engines", "simulation", "graphics"]
 # Internal crates (path + version for publishing)
 gravita-math = { version = "0.1.0", path = "crates/math" }
 gravita-physics = { version = "0.1.0", path = "crates/physics" }
+gravita-physics-3d = { version = "0.1.0", path = "crates/physics-3d" }
 gravita-renderer = { version = "0.1.0", path = "crates/renderer" }
 gravita-collections = { version = "0.1.0", path = "crates/collections" }
 gravita-engine-core = { version = "0.1.0", path = "crates/engine-core" }

@@ -1,0 +1,17 @@
+[package]
+name = "gravita-physics-3d"
+description = "3D rigid body physics for the Gravita engine"
+version = "0.1.0"
+publish = false
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["physics", "3d", "simulation"]
+categories = ["game-engines", "simulation"]
+
+[lints]
+workspace = true
+
+[dependencies]
+gravita-math = { workspace = true }
