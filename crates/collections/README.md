@@ -1,56 +1,47 @@
 # gravita-collections
 
-Pre-built game objects for rapid prototyping.
+Pre-built 2D game objects that demonstrate how to wire `gravita-math` + `gravita-renderer` together.
 
-## Available Objects
+These exist as concrete tutorials — they're useful as starting points, not as a production game-object library. Copy what you need and modify freely.
 
-### Stickman
+## What's in the box
 
-Animated humanoid character with walking and jumping.
+| Object | Behaviour | Constructor |
+|---|---|---|
+| `Stickman` | Walks left/right, jumps, gravity-clamped to a ground line | `Stickman::new(base_y, screen_width)` |
+| `Spaceship` | Thrust + rotate + linear/angular damping, screen-wrap | `Spaceship::new(position)` |
+| `Planet` | Static gravitational body (just a circle for now) | `Planet::new(center, radius)` |
 
-```rust
-use gravita_collections::Stickman;
-
-let mut stickman = Stickman::new(ground_y, screen_width);
-
-// Input handling
-stickman.set_move_direction(1.0);  // Move right (-1 = left, 0 = stop)
-stickman.jump();                   // Jump if grounded
-
-// Update and render
-stickman.update(dt, screen_width);
-stickman.render(&mut frame, width, height);
-```
-
-### Spaceship
-
-Thrust-based vehicle with rotation controls.
+All three implement the shared [`Drawable`](src/lib.rs) trait:
 
 ```rust
-use gravita_collections::Spaceship;
-
-let mut ship = Spaceship::new(Vec2::new(400.0, 300.0));
-
-// Input handling
-ship.set_input(thrust, turn);  // thrust: 0-1, turn: -1 to 1
-
-// Update and render
-ship.update(dt);
-ship.render(&mut frame, width, height);
+pub trait Drawable {
+    fn render(&self, frame: &mut [u8], width: u32, height: u32);
+}
 ```
 
-### Planet
+so example runners can iterate `&[Box<dyn Drawable>]` and call `render` uniformly.
 
-Static celestial body for orbital mechanics demos.
+## Quick example
 
 ```rust
-use gravita_collections::Planet;
+use gravita_collections::{Drawable, Spaceship, Planet, Stickman};
+use gravita_math::Vec2;
 
-let planet = Planet::new(Vec2::new(512.0, 384.0), 50.0);
-planet.render(&mut frame, width, height);
+let scene: Vec<Box<dyn Drawable>> = vec![
+    Box::new(Stickman::new(560.0, 800.0)),
+    Box::new(Spaceship::new(Vec2::new(400.0, 300.0))),
+    Box::new(Planet::new(Vec2::new(400.0, 300.0), 100.0)),
+];
+
+let mut frame = vec![0u8; 800 * 600 * 4];
+for entity in &scene {
+    entity.render(&mut frame, 800, 600);
+}
 ```
+
+For complete usage, see [`examples/stickman-walk`](../../examples/stickman-walk/) and [`examples/gravity-arena`](../../examples/gravity-arena/).
 
 ## License
 
-MIT OR Apache-2.0
-
+MIT — see [../../LICENSE](../../LICENSE).

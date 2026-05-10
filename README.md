@@ -1,244 +1,247 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/rust-nightly--2025-orange?logo=rust" alt="Rust Version">
-  <img src="https://img.shields.io/github/license/cantoramann/gravita" alt="License">
-  <img src="https://img.shields.io/badge/wasm-supported-green" alt="WASM Support">
+  <img src="https://img.shields.io/badge/rust-nightly--2025-orange?logo=rust" alt="Rust nightly 2025">
+  <img src="https://img.shields.io/github/license/cantoramann/gravita" alt="MIT licensed">
+  <img src="https://img.shields.io/badge/2D-pixels-blue" alt="2D pixels">
+  <img src="https://img.shields.io/badge/3D-wgpu-purple" alt="3D wgpu">
+  <img src="https://img.shields.io/badge/tests-513%20passing-brightgreen" alt="513 tests passing">
 </p>
 
-# 🌌 Gravita
+# Gravita
 
-A modular 2D physics engine and game framework written in Rust. Designed for real-time simulations, games, and educational exploration of physics concepts.
+A modular physics engine and game framework for Rust, with **2D and 3D pipelines side by side**. Designed to be readable end-to-end — every layer (math, physics, renderer) is small enough to understand in an afternoon.
 
-## ✨ Features
-
-- **🔬 Physics Simulation**
-  - Rigid body dynamics with linear and angular motion
-  - Collision detection (circles, AABBs)
-  - Contact resolution with friction and restitution
-  - Pluggable integrators (Semi-implicit Euler, Verlet)
-  - Configurable gravity and damping
-
-- **🧮 Math Library**
-  - Dependency-free 2D vector math (`Vec2`)
-  - Axis-aligned bounding boxes (`AABB`)
-  - Circles, rays, and transforms
-  - Utility functions: lerp, clamp, remap, smooth_step
-
-- **🎨 Renderer**
-  - Minimal CPU-based 2D rendering
-  - Drawing primitives: circles, lines, rectangles
-  - Frame buffer rendering via [pixels](https://github.com/parasyte/pixels)
-
-- **🎮 Game Collections**
-  - Pre-built game objects: Stickman, Spaceship, Planet
-  - Ready-to-use animated characters with movement logic
-
-- **🌐 Cross-Platform**
-  - Native: macOS (ARM64/x86_64), Linux (ARM64/x86_64)
-  - Web: WebAssembly (wasm32-unknown-unknown)
-
-## 📦 Crate Structure
-
-```
-gravita/
-├── crates/
-│   ├── math/           # 2D vector math, geometry primitives
-│   ├── physics/        # Rigid body dynamics, collision detection
-│   ├── renderer/       # Minimal 2D rendering utilities
-│   ├── collections/    # Pre-built game objects (Stickman, Spaceship, etc.)
-│   ├── engine-core/    # Core engine orchestration (WIP)
-│   ├── input/          # Input handling abstraction (WIP)
-│   └── assets/         # Asset loading utilities (WIP)
-└── examples/
-    ├── bouncing-balls/ # Physics demo with bouncing balls
-    ├── gravity-arena/  # Orbital mechanics with spaceship
-    ├── rotating-rod/   # Angular momentum demonstration
-    ├── stickman-walk/  # Animated character with controls
-    └── tetris/         # Classic Tetris implementation
+```text
+2D (CPU)                 3D (GPU, wgpu)
+─────────                ──────────────
+gravita-renderer    ←→   gravita-renderer-3d
+gravita-physics     ←→   gravita-physics-3d
+        ╲                   ╱
+         ╲    gravita-math    ╱   ← shared 2D/3D math, Vec2 + Vec3
+          ╲       ↑↓        ╱
+           gravita (umbrella with feature flags)
 ```
 
-## 🚀 Quick Start
+If you're new here, jump to **[Five-minute tour](#five-minute-tour)** below.
 
-### Prerequisites
+---
 
-- **Rust nightly** (2025-08-08 or later)
+## What's inside
 
-The project uses `rust-toolchain.toml` to automatically select the correct toolchain.
+**2D pipeline.** [`gravita-physics`](crates/physics) runs a rigid-body simulation (circles + AABBs, semi-implicit Euler / Verlet, restitution + friction, spatial-hash broad phase, collision events). [`gravita-renderer`](crates/renderer) is a CPU framebuffer rasterizer — `clear`, `draw_circle`, `draw_line`, `draw_rect_filled`, `draw_axes`, a 5×7 bitmap font, alpha blending. No GPU required.
 
-### Running an Example
+**3D pipeline.** [`gravita-physics-3d`](crates/physics-3d) handles 3D rigid bodies (`Sphere`, `Aabb3`, `Obb` with SAT), quaternion rotation, 3D spatial-hash broad phase, friction impulses. [`gravita-renderer-3d`](crates/renderer-3d) is a `wgpu` instanced-mesh renderer with a built-in `winit` runner.
+
+**Shared math.** [`gravita-math`](crates/math) is dependency-free and used by both pipelines: `Vec2`, `Vec3`, `Quat`, `Aabb`, `Aabb3`, `Sphere`, `Obb`, `Ray2D`, `Ray3D`, `Transform2D`, `Transform3D`, plus a `Vector` trait so dim-agnostic code (`move_toward`, `attract`, …) can run against either dimension.
+
+**Examples-only shim.** [`gravita-example-shim`](crates/example-shim) and the runner module inside `gravita-renderer-3d` factor out the `winit::ApplicationHandler` boilerplate; the 2D examples are ~60–100 LOC of actual game code each.
+
+---
+
+## Five-minute tour
+
+### 1. Install Rust nightly
 
 ```bash
-# Clone the repository
 git clone https://github.com/cantoramann/gravita.git
 cd gravita
-
-# Run the bouncing balls demo
-cargo run --example bouncing-balls
-
-# Run the gravity arena (spaceship simulation)
-cargo run -p gravity-arena
-
-# Run the stickman walking demo
-cargo run -p stickman-walk
+# The repo pins a nightly toolchain in rust-toolchain.toml; rustup will use it automatically.
+cargo --version
 ```
 
-### Using as a Library
+### 2. Run a 2D demo
 
-Add the crates you need to your `Cargo.toml`:
-
-```toml
-[dependencies]
-gravita-math = { git = "https://github.com/cantoramann/gravita" }
-gravita-physics = { git = "https://github.com/cantoramann/gravita" }
+```bash
+cargo run -p bouncing-balls
+# Click anywhere to spawn a new ball. Esc to quit.
 ```
 
-## 📖 Usage Examples
+You should see balls falling into a pit and bouncing realistically. Other 2D demos:
 
-### Basic Physics Simulation
+| Demo | Run | Controls |
+|---|---|---|
+| `bouncing-balls` | `cargo run -p bouncing-balls` | Click to spawn, Esc to quit |
+| `gravity-arena` | `cargo run -p gravity-arena` | Arrow keys thrust/turn |
+| `rotating-rod` | `cargo run -p rotating-rod` | (autonomous; Esc to quit) |
+| `stickman-walk` | `cargo run -p stickman-walk` | A/D walk, Space jump |
+| `tetris` | `cargo run -p tetris` | Arrows, Space hard-drop |
+| `froggy-jump` | `cargo build --target wasm32-unknown-unknown -p froggy-jump` | (WASM build only — open `examples/froggy-jump/index.html` after a build) |
+
+### 3. Run a 3D demo
+
+```bash
+cargo run -p spheres-3d
+# Spheres bounce on a static floor. Arrow keys orbit the camera. Space spawns a fresh sphere. Esc to quit.
+```
+
+| Demo | Run | What it shows |
+|---|---|---|
+| `cube-3d` | `cargo run -p cube-3d` | Smoke test: spinning multicolored cube on a plane |
+| `spheres-3d` | `cargo run -p spheres-3d` | `gravita-physics-3d` driving `gravita-renderer-3d` |
+
+### 4. Write your own 2D sim
 
 ```rust
-use gravita_math::{Vec2, Circle};
-use gravita_physics::{PhysicsWorld, RigidBody, CollisionShape, BodyType};
+use gravita_math::{Aabb, Circle, Vec2};
+use gravita_physics::{BodyType, CollisionShape, PhysicsWorld, RigidBody};
 
 fn main() {
-    // Create a physics world
     let mut world = PhysicsWorld::new();
     world.set_gravity(Vec2::new(0.0, -500.0));
 
-    // Create a static ground
-    let ground = RigidBody::new(0, CollisionShape::AABB(
-        AABB::from_center_size(Vec2::ZERO, Vec2::new(800.0, 50.0))
-    ))
-    .with_type(BodyType::Static)
-    .with_position(Vec2::new(400.0, 25.0));
-    world.add_body(ground);
-
-    // Create a bouncing ball
-    let ball = RigidBody::new(0, CollisionShape::Circle(
-        Circle::new(Vec2::ZERO, 20.0)
-    ))
-    .with_position(Vec2::new(400.0, 300.0))
-    .with_density(1.0);
-    world.add_body(ball);
-
-    // Simulate
-    let dt = 1.0 / 60.0;
-    for _ in 0..600 {
-        world.step(dt);
-        
-        for body in world.get_bodies() {
-            println!("Body {} at {:?}", body.id, body.position);
-        }
-    }
-}
-```
-
-### Vector Math
-
-```rust
-use gravita_math::{Vec2, lerp, clamp};
-
-let a = Vec2::new(3.0, 4.0);
-let b = Vec2::new(1.0, 2.0);
-
-// Basic operations
-let sum = a + b;                    // Vec2(4.0, 6.0)
-let scaled = a * 2.0;               // Vec2(6.0, 8.0)
-let length = a.length();            // 5.0
-let normalized = a.normalize();     // Vec2(0.6, 0.8)
-let dot = a.dot(b);                 // 11.0
-
-// Rotation
-let rotated = Vec2::RIGHT.rotate(std::f32::consts::FRAC_PI_2); // Vec2(0.0, 1.0)
-
-// Interpolation
-let mid = a.lerp(b, 0.5);           // Vec2(2.0, 3.0)
-```
-
-### Collision Events
-
-```rust
-// After stepping the physics world
-for event in world.get_collision_events() {
-    println!(
-        "Collision between {} and {} with impulse {}",
-        event.body_a,
-        event.body_b,
-        event.impulse_magnitude
+    // Static floor.
+    world.add_body(
+        RigidBody::new(0, CollisionShape::Aabb(
+            Aabb::from_center_size(Vec2::new(400.0, 25.0), Vec2::new(800.0, 50.0)),
+        ))
+        .with_type(BodyType::Static),
     );
-    
-    // Use impulse_magnitude for sound/damage systems
-    if event.impulse_magnitude > 100.0 {
-        play_impact_sound(event.impulse_magnitude);
+
+    // Bouncy ball.
+    world.add_body(
+        RigidBody::new(0, CollisionShape::Circle(Circle::new(Vec2::ZERO, 20.0)))
+            .with_position(Vec2::new(400.0, 300.0))
+            .with_density(1.0)
+            .with_restitution(0.8),
+    );
+
+    for _ in 0..600 {
+        world.step(1.0 / 60.0);
     }
+    println!("Ball ended at {:?}", world.get_bodies()[1].position);
 }
 ```
 
-## 🛠️ Development
+### 5. Write your own 3D sim
 
-### Building
+```rust
+use gravita_math::{Sphere, Vec3};
+use gravita_physics_3d::{BodyType, CollisionShape, PhysicsWorld, RigidBody};
 
-```bash
-# Build all crates
-cargo build --workspace
+fn main() {
+    let mut world = PhysicsWorld::new();
+    world.set_gravity(Vec3::new(0.0, -9.81, 0.0));
 
-# Build in release mode
-cargo build --workspace --release
+    // Drop a sphere from 5 m up.
+    world.add_body(
+        RigidBody::new(0, CollisionShape::Sphere(Sphere::new(Vec3::ZERO, 0.5)))
+            .with_position(Vec3::new(0.0, 5.0, 0.0))
+            .with_restitution(0.6),
+    );
 
-# Build for WebAssembly
-cargo build --target wasm32-unknown-unknown -p stickman-walk
+    for _ in 0..120 {
+        world.step(1.0 / 60.0);
+    }
+    println!("Sphere is now at {:?}", world.bodies()[0].position);
+}
 ```
 
-### Testing
+For graphics, take `examples/spheres-3d/src/main.rs` as the template — it's <200 LOC of game code plus the `App3D` trait.
 
-```bash
-# Run all tests
-cargo test --workspace
+---
 
-# Run tests with output
-cargo test --workspace -- --nocapture
+## Repo layout
+
+```text
+gravita/
+├── crates/
+│   ├── math/              # Vec2/Vec3, Quat, Aabb/Aabb3, Sphere, Obb, Ray2D/3D, transforms
+│   ├── physics/           # 2D rigid body sim
+│   ├── physics-3d/        # 3D rigid body sim (Quat rotation, SAT for OBB)
+│   ├── renderer/          # CPU 2D rasterizer
+│   ├── renderer-3d/       # wgpu 3D renderer + winit runner
+│   ├── collections/       # Pre-built 2D game objects (Stickman, Spaceship, Planet)
+│   ├── example-shim/      # Internal: winit/pixels glue for 2D examples
+│   ├── engine-core/       # Placeholder for a future high-level engine
+│   ├── input/             # Placeholder for a future input abstraction
+│   ├── assets/            # Placeholder for asset loading
+│   └── gravita/           # Umbrella crate — re-exports everything via features
+├── examples/
+│   ├── bouncing-balls/    # 2D physics
+│   ├── gravity-arena/     # 2D orbital mechanics
+│   ├── rotating-rod/      # 2D pendulum
+│   ├── stickman-walk/     # 2D animated character
+│   ├── tetris/            # 2D classic game
+│   ├── froggy-jump/       # 2D + WASM
+│   ├── cube-3d/           # 3D spinning cube
+│   └── spheres-3d/        # 3D bouncing-spheres
+├── ARCHITECTURE.md        # System map + per-frame dataflow
+├── CLAUDE.md              # Onboarding notes for Claude Code and other AI agents
+├── CONTRIBUTING.md        # How to contribute
+└── README.md              # You are here
 ```
 
-### Linting
+For the conceptual map of how those crates talk to each other, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
-```bash
-# Check formatting
-cargo fmt --check
+---
 
-# Run clippy
-cargo clippy --workspace --all-targets
+## Feature flags
+
+The umbrella `gravita` crate exposes everything behind cargo features so you only compile what you need.
+
+| Feature | Default | Pulls in | Use when |
+|---|---|---|---|
+| `math` | ✅ | nothing | Always — 2D **and** 3D types live here |
+| `physics` | ✅ | `math` | 2D rigid-body sim |
+| `physics-3d` | ❌ | `math` | 3D rigid-body sim |
+| `renderer` | ✅ | nothing | 2D CPU framebuffer drawing |
+| `renderer-3d` | ❌ | wgpu + winit | GPU 3D rendering + windowed runner |
+| `collections` | ❌ | `math`, `renderer` | Pre-built 2D characters |
+| `full` | ❌ | everything | Get the whole engine |
+
+Examples — 2D only:
+
+```toml
+[dependencies]
+gravita = { version = "0.1", default-features = false, features = ["math", "physics", "renderer"] }
 ```
 
-### Documentation
+3D only:
 
-```bash
-# Generate documentation
-cargo doc --workspace --no-deps --open
+```toml
+[dependencies]
+gravita = { version = "0.1", default-features = false, features = ["math", "physics-3d", "renderer-3d"] }
 ```
 
-## 🎯 Examples in Detail
+---
 
-| Example | Description | Controls |
-|---------|-------------|----------|
-| `bouncing-balls` | Physics demo with bouncing balls | Click to spawn balls, Esc to exit |
-| `gravity-arena` | Orbital mechanics simulation | Arrow keys to thrust/turn, Esc to exit |
-| `rotating-rod` | Angular momentum demonstration | Mouse to interact |
-| `stickman-walk` | Animated stickman character | A/D to walk, Space to jump |
-| `tetris` | Classic Tetris game | Arrow keys, Space to drop |
+## Development
 
-## 🗺️ Roadmap
+```bash
+cargo build --workspace               # all crates + examples
+cargo test --workspace                # 513 tests
+cargo clippy --workspace --all-targets # workspace lints (see Cargo.toml)
+cargo fmt --all                       # rustfmt
+cargo bench -p gravita-math           # math benches (criterion)
+cargo bench -p gravita-physics        # 2D physics benches
+cargo bench -p gravita-physics-3d     # 3D physics benches (step + broad phase + OBB SAT)
+cargo doc --workspace --no-deps --open # render API docs
+```
 
-- [ ] Polygon collision shapes
-- [ ] Constraint/joint system
-- [ ] Spatial hashing broad-phase optimization
-- [ ] GPU-accelerated rendering (wgpu)
-- [ ] Audio integration
-- [ ] ECS integration (bevy compatibility)
+---
 
-## 📄 License
+## Roadmap
 
-This project is licensed under the [MIT License](LICENSE).
+- [x] 2D rigid body physics (circles, AABBs, friction, restitution, contact events)
+- [x] 2D spatial-hash broad phase
+- [x] 3D rigid body physics (Sphere, AABB, OBB with SAT)
+- [x] 3D spatial-hash broad phase
+- [x] Quaternion-based 3D rotation
+- [x] Friction impulses (Coulomb cone) in both 2D and 3D
+- [x] CPU 2D renderer (lines, circles, rects, text, alpha blend)
+- [x] GPU 3D renderer (wgpu, instanced colored meshes, depth, directional light)
+- [ ] Constraint / joint system (distance, hinge)
+- [ ] Polygon (`Convex`) collision shape with SAT in 2D
+- [ ] Capsule shape (both 2D and 3D)
+- [ ] Continuous collision detection (CCD) for fast-moving bodies
+- [ ] Audio crate
+- [ ] ECS integration (`bevy_ecs` compat layer)
 
-## 🤝 Contributing
+---
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## License
 
+MIT — see [LICENSE](LICENSE).
+
+## Contributing
+
+Pull requests welcome. Style and review expectations are in [CONTRIBUTING.md](CONTRIBUTING.md). If you're using an AI coding assistant on this repo, point it at [CLAUDE.md](CLAUDE.md) first — it's the agent-specific onboarding.
