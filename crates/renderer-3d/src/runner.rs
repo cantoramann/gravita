@@ -164,7 +164,9 @@ impl<A: App3D> ApplicationHandler for Runner<A> {
     ) {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::KeyboardInput { event: key_event, .. } => {
+            WindowEvent::KeyboardInput {
+                event: key_event, ..
+            } => {
                 if let PhysicalKey::Code(code) = key_event.physical_key {
                     match key_event.state {
                         ElementState::Pressed => {
@@ -252,5 +254,4 @@ pub fn run<A: App3D>(config: WindowConfig, app: A) -> Result<(), Box<dyn std::er
 }
 
 // Re-export common winit types so examples don't need a direct winit dep.
-pub use winit::event::MouseButton as ShimMouseButton;
-pub use winit::keyboard::KeyCode as ShimKeyCode;
+pub use winit::{event::MouseButton as ShimMouseButton, keyboard::KeyCode as ShimKeyCode};

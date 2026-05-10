@@ -154,7 +154,10 @@ mod tests {
     #[test]
     fn closest_point_outside_clamps() {
         let a = Aabb3::new(Vec3::ZERO, Vec3::splat(10.0));
-        assert_eq!(a.closest_point(Vec3::new(-1.0, 5.0, 12.0)), Vec3::new(0.0, 5.0, 10.0));
+        assert_eq!(
+            a.closest_point(Vec3::new(-1.0, 5.0, 12.0)),
+            Vec3::new(0.0, 5.0, 10.0)
+        );
     }
 
     #[test]

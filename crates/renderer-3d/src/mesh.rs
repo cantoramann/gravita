@@ -116,8 +116,7 @@ impl Mesh {
     pub fn uv_sphere(radius: f32, segments: u32, rings: u32, color: [f32; 3]) -> Self {
         let segments = segments.max(3);
         let rings = rings.max(2);
-        let mut vertices =
-            Vec::with_capacity(((rings + 1) * (segments + 1)) as usize);
+        let mut vertices = Vec::with_capacity(((rings + 1) * (segments + 1)) as usize);
         let mut indices = Vec::with_capacity((rings * segments * 6) as usize);
 
         use std::f32::consts::PI;
@@ -219,9 +218,7 @@ mod tests {
         let s = Mesh::uv_sphere(3.0, 8, 4, [1.0; 3]);
         for v in &s.vertices {
             let n = v.normal;
-            let len = n[2]
-                .mul_add(n[2], n[0].mul_add(n[0], n[1] * n[1]))
-                .sqrt();
+            let len = n[2].mul_add(n[2], n[0].mul_add(n[0], n[1] * n[1])).sqrt();
             assert!((len - 1.0).abs() < 1e-4, "normal not unit length: {n:?}");
         }
     }

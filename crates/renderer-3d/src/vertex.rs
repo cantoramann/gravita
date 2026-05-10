@@ -19,7 +19,11 @@ impl Vertex {
     /// Convenience constructor.
     #[inline]
     pub const fn new(position: [f32; 3], color: [f32; 3], normal: [f32; 3]) -> Self {
-        Self { position, color, normal }
+        Self {
+            position,
+            color,
+            normal,
+        }
     }
 
     /// `wgpu::VertexBufferLayout` describing this struct.

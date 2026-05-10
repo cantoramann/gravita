@@ -133,7 +133,11 @@ impl Transform3D {
     #[inline]
     fn unscaled(&self, v: Vec3) -> Vec3 {
         let inv = |s: f32, x: f32| if s.abs() > f32::EPSILON { x / s } else { 0.0 };
-        Vec3::new(inv(self.scale.x, v.x), inv(self.scale.y, v.y), inv(self.scale.z, v.z))
+        Vec3::new(
+            inv(self.scale.x, v.x),
+            inv(self.scale.y, v.y),
+            inv(self.scale.z, v.z),
+        )
     }
 }
 
@@ -156,13 +160,19 @@ mod tests {
     #[test]
     fn identity_transforms_point_unchanged() {
         let t = Transform3D::IDENTITY;
-        assert!(vec_approx(t.transform_point(Vec3::new(1.0, 2.0, 3.0)), Vec3::new(1.0, 2.0, 3.0)));
+        assert!(vec_approx(
+            t.transform_point(Vec3::new(1.0, 2.0, 3.0)),
+            Vec3::new(1.0, 2.0, 3.0)
+        ));
     }
 
     #[test]
     fn translate_only_adds_position() {
         let t = Transform3D::from_position(Vec3::new(10.0, 0.0, 0.0));
-        assert!(vec_approx(t.transform_point(Vec3::ZERO), Vec3::new(10.0, 0.0, 0.0)));
+        assert!(vec_approx(
+            t.transform_point(Vec3::ZERO),
+            Vec3::new(10.0, 0.0, 0.0)
+        ));
     }
 
     #[test]
@@ -188,14 +198,20 @@ mod tests {
             .with_rotation(Quat::from_axis_angle(Vec3::Z, FRAC_PI_2))
             .with_position(Vec3::new(0.0, 1.0, 0.0));
         // x=1 → scaled (2,0,0) → rotated (0,2,0) → translated (0,3,0)
-        assert!(vec_approx(t.transform_point(Vec3::X), Vec3::new(0.0, 3.0, 0.0)));
+        assert!(vec_approx(
+            t.transform_point(Vec3::X),
+            Vec3::new(0.0, 3.0, 0.0)
+        ));
     }
 
     #[test]
     fn inverse_transform_undoes_forward_transform() {
         let t = Transform3D::IDENTITY
             .with_scale(Vec3::new(2.0, 3.0, 4.0))
-            .with_rotation(Quat::from_axis_angle(Vec3::new(1.0, 1.0, 1.0).normalize(), 1.234))
+            .with_rotation(Quat::from_axis_angle(
+                Vec3::new(1.0, 1.0, 1.0).normalize(),
+                1.234,
+            ))
             .with_position(Vec3::new(5.0, -2.0, 7.0));
         let p = Vec3::new(0.5, 0.6, 0.7);
         let world = t.transform_point(p);

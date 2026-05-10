@@ -214,7 +214,9 @@ impl<A: App> ApplicationHandler for Runner<A> {
                 self.input.close_requested = true;
                 event_loop.exit();
             },
-            WindowEvent::KeyboardInput { event: key_event, .. } => {
+            WindowEvent::KeyboardInput {
+                event: key_event, ..
+            } => {
                 if let PhysicalKey::Code(code) = key_event.physical_key {
                     match key_event.state {
                         ElementState::Pressed => {
@@ -254,7 +256,9 @@ impl<A: App> ApplicationHandler for Runner<A> {
             },
             WindowEvent::Resized(new_size) => {
                 if let Some(pixels) = self.pixels.as_mut()
-                    && pixels.resize_surface(new_size.width, new_size.height).is_err()
+                    && pixels
+                        .resize_surface(new_size.width, new_size.height)
+                        .is_err()
                 {
                     error!("pixels.resize_surface failed");
                     event_loop.exit();
@@ -315,5 +319,4 @@ pub fn run<A: App>(config: WindowConfig, app: A) -> Result<(), Box<dyn std::erro
 }
 
 // Re-exports so examples don't need to add winit to their own deps.
-pub use winit::event::MouseButton as ShimMouseButton;
-pub use winit::keyboard::KeyCode as ShimKeyCode;
+pub use winit::{event::MouseButton as ShimMouseButton, keyboard::KeyCode as ShimKeyCode};

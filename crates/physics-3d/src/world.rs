@@ -70,7 +70,10 @@ impl PhysicsWorld {
 
     /// Step the simulation by `dt` seconds.
     pub fn step(&mut self, dt: f32) {
-        debug_assert!(dt > 0.0 && dt.is_finite(), "non-finite or non-positive dt: {dt}");
+        debug_assert!(
+            dt > 0.0 && dt.is_finite(),
+            "non-finite or non-positive dt: {dt}"
+        );
 
         for body in &mut self.bodies {
             body.clear_forces();
@@ -210,11 +213,7 @@ impl PhysicsWorld {
         b.apply_impulse_at_point(impulse_t, contact.point);
     }
 
-    fn solve_position(
-        bodies: &mut [RigidBody],
-        contact: &Contact,
-        position_correction: f32,
-    ) {
+    fn solve_position(bodies: &mut [RigidBody], contact: &Contact, position_correction: f32) {
         // Allow a small amount of overlap to keep stacks from jittering.
         const SLOP: f32 = 0.01;
         if contact.penetration <= SLOP {
@@ -229,8 +228,8 @@ impl PhysicsWorld {
         if inv_mass_sum == 0.0 {
             return;
         }
-        let correction =
-            contact.normal * ((contact.penetration - SLOP).max(0.0) * position_correction / inv_mass_sum);
+        let correction = contact.normal
+            * ((contact.penetration - SLOP).max(0.0) * position_correction / inv_mass_sum);
         a.position -= correction * a.inv_mass();
         b.position += correction * b.inv_mass();
     }
@@ -287,7 +286,11 @@ mod tests {
         let b = w.body_mut(id).unwrap();
         // After 1 second of gravity ≈ 9.81 m/s², y should be near -4.9 m
         // (factoring in damping). Loose check: must have moved DOWN substantially.
-        assert!(b.position.y < -3.0, "expected significant fall, got y={}", b.position.y);
+        assert!(
+            b.position.y < -3.0,
+            "expected significant fall, got y={}",
+            b.position.y
+        );
     }
 
     #[test]
@@ -316,7 +319,11 @@ mod tests {
         }
         let b = w.body_mut(ball_id).unwrap();
         // Should have come to rest near the floor (y ≈ floor_top + radius)
-        assert!(b.velocity.length() < 0.5, "sphere should be roughly at rest, v={:?}", b.velocity);
+        assert!(
+            b.velocity.length() < 0.5,
+            "sphere should be roughly at rest, v={:?}",
+            b.velocity
+        );
         // The floor top is at y = -1 + 0.5 = -0.5. The sphere's center at rest
         // would be approximately at -0.5 + 0.5 + slop ≈ ~0. Loose bound.
         assert!(
@@ -386,7 +393,15 @@ mod tests {
         let a = &w.bodies()[ai];
         let b = &w.bodies()[bi];
         // After elastic head-on collision both should be moving outward.
-        assert!(a.velocity.x < 0.0, "A should be moving left after bounce, v={:?}", a.velocity);
-        assert!(b.velocity.x > 0.0, "B should be moving right after bounce, v={:?}", b.velocity);
+        assert!(
+            a.velocity.x < 0.0,
+            "A should be moving left after bounce, v={:?}",
+            a.velocity
+        );
+        assert!(
+            b.velocity.x > 0.0,
+            "B should be moving right after bounce, v={:?}",
+            b.velocity
+        );
     }
 }

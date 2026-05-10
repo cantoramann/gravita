@@ -5,8 +5,8 @@
 
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use gravita_math::{
-    Aabb, Aabb3, Circle, Obb, PI, Quat, Ray2D, Sphere, Transform2D, Transform3D, Vec2, Vec3,
-    lerp, smooth_step,
+    Aabb, Aabb3, Circle, Obb, PI, Quat, Ray2D, Sphere, Transform2D, Transform3D, Vec2, Vec3, lerp,
+    smooth_step,
 };
 
 // ============================================================================

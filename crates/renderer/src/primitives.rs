@@ -8,7 +8,7 @@ pub mod clear;
 pub mod line;
 pub mod rect;
 
-pub use axes::{draw_axes};
+pub use axes::draw_axes;
 pub use circle::{draw_circle, draw_circle_alpha};
 pub use clear::clear;
 pub use line::draw_line;

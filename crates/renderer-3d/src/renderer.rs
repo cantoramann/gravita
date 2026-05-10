@@ -80,7 +80,8 @@ impl Renderer3D {
             &wgpu::DeviceDescriptor {
                 label: Some("gravita-renderer-3d device"),
                 required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::downlevel_defaults().using_resolution(adapter.limits()),
+                required_limits:
+                    wgpu::Limits::downlevel_defaults().using_resolution(adapter.limits()),
             },
             None,
         ))?;
@@ -226,7 +227,11 @@ impl Renderer3D {
     }
 
     /// Draw `instances` from the perspective of `camera` and present.
-    pub fn render(&mut self, camera: &Camera, instances: &[Instance]) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(
+        &mut self,
+        camera: &Camera,
+        instances: &[Instance],
+    ) -> Result<(), wgpu::SurfaceError> {
         // Update globals uniform.
         let globals = GlobalsRaw {
             view_proj: camera.view_projection(),
@@ -263,11 +268,13 @@ impl Renderer3D {
             .enumerate()
             .filter(|(_, raws)| !raws.is_empty())
             .map(|(mesh_id, raws)| {
-                let buf = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("instance buffer"),
-                    contents: bytemuck::cast_slice(raws),
-                    usage: wgpu::BufferUsages::VERTEX,
-                });
+                let buf = self
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("instance buffer"),
+                        contents: bytemuck::cast_slice(raws),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
                 (mesh_id, buf, raws.len() as u32)
             })
             .collect();
@@ -328,7 +335,10 @@ impl Renderer3D {
     }
 }
 
-fn create_depth_view(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration) -> wgpu::TextureView {
+fn create_depth_view(
+    device: &wgpu::Device,
+    config: &wgpu::SurfaceConfiguration,
+) -> wgpu::TextureView {
     let texture = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("depth texture"),
         size: wgpu::Extent3d {

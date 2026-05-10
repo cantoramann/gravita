@@ -70,8 +70,11 @@ impl Quat {
     /// Squared length of the quaternion `(x²+y²+z²+w²)`.
     #[inline]
     pub fn length_squared(&self) -> f32 {
-        self.x
-            .mul_add(self.x, self.y.mul_add(self.y, self.z.mul_add(self.z, self.w * self.w)))
+        self.x.mul_add(
+            self.x,
+            self.y
+                .mul_add(self.y, self.z.mul_add(self.z, self.w * self.w)),
+        )
     }
 
     /// Euclidean length.

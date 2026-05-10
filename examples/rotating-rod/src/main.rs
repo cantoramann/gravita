@@ -77,7 +77,14 @@ impl App for RodDemo {
         let dir = (end - pivot).normalize();
         let arrow_len = (f_mag * 0.02).min(80.0);
         let arrow_end = end + dir * arrow_len;
-        draw_line(frame, end, arrow_end, [0xff, 0x40, 0x40, 0xff], WIDTH, HEIGHT);
+        draw_line(
+            frame,
+            end,
+            arrow_end,
+            [0xff, 0x40, 0x40, 0xff],
+            WIDTH,
+            HEIGHT,
+        );
     }
 }
 

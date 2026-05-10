@@ -111,7 +111,8 @@ impl App3D for Demo {
         self.sphere_mesh = Some(
             renderer.register_mesh("sphere", &Mesh::uv_sphere(1.0, 24, 16, [0.85, 0.85, 0.92])),
         );
-        self.plane_mesh = Some(renderer.register_mesh("floor", &Mesh::plane(40.0, [0.18, 0.20, 0.24])));
+        self.plane_mesh =
+            Some(renderer.register_mesh("floor", &Mesh::plane(40.0, [0.18, 0.20, 0.24])));
     }
 
     fn update(&mut self, dt: f32, input: &Input) {
@@ -139,8 +140,12 @@ impl App3D for Demo {
     }
 
     fn render(&self, renderer: &mut Renderer3D) {
-        let Some(sphere_mesh) = self.sphere_mesh else { return };
-        let Some(plane_mesh) = self.plane_mesh else { return };
+        let Some(sphere_mesh) = self.sphere_mesh else {
+            return;
+        };
+        let Some(plane_mesh) = self.plane_mesh else {
+            return;
+        };
 
         let mut instances: Vec<Instance> = Vec::with_capacity(self.sphere_ids.len() + 1);
 

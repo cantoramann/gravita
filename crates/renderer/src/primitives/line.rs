@@ -5,14 +5,7 @@ use gravita_math::Vec2;
 use crate::{color::Color, frame::put_pixel};
 
 /// Draw a 1-pixel wide line between two points using Bresenham's algorithm.
-pub fn draw_line(
-    frame: &mut [u8],
-    start: Vec2,
-    end: Vec2,
-    color: Color,
-    width: u32,
-    height: u32,
-) {
+pub fn draw_line(frame: &mut [u8], start: Vec2, end: Vec2, color: Color, width: u32, height: u32) {
     let x0 = start.x.round() as i32;
     let y0 = start.y.round() as i32;
     let x1 = end.x.round() as i32;
@@ -68,7 +61,14 @@ mod tests {
     #[test]
     fn line_horizontal() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(10.0, 50.0), Vec2::new(90.0, 50.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(10.0, 50.0),
+            Vec2::new(90.0, 50.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 10, 50), palette::GREEN);
         assert_eq!(pixel_at(&f, 90, 50), palette::GREEN);
         assert_eq!(pixel_at(&f, 50, 50), palette::GREEN);
@@ -77,7 +77,14 @@ mod tests {
     #[test]
     fn line_vertical() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(50.0, 10.0), Vec2::new(50.0, 90.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(50.0, 10.0),
+            Vec2::new(50.0, 90.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 50, 10), palette::GREEN);
         assert_eq!(pixel_at(&f, 50, 90), palette::GREEN);
         assert_eq!(pixel_at(&f, 50, 50), palette::GREEN);
@@ -86,7 +93,14 @@ mod tests {
     #[test]
     fn line_diagonal() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(10.0, 10.0), Vec2::new(90.0, 90.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(10.0, 10.0),
+            Vec2::new(90.0, 90.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 10, 10), palette::GREEN);
         assert_eq!(pixel_at(&f, 90, 90), palette::GREEN);
     }
@@ -94,7 +108,14 @@ mod tests {
     #[test]
     fn line_clipped_does_not_panic() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(-50.0, 50.0), Vec2::new(150.0, 50.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(-50.0, 50.0),
+            Vec2::new(150.0, 50.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 0, 50), palette::GREEN);
         assert_eq!(pixel_at(&f, 99, 50), palette::GREEN);
     }
@@ -102,21 +123,42 @@ mod tests {
     #[test]
     fn line_completely_outside_does_not_panic() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(-50.0, -50.0), Vec2::new(-10.0, -10.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(-50.0, -50.0),
+            Vec2::new(-10.0, -10.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 0, 0), [0, 0, 0, 0]);
     }
 
     #[test]
     fn line_single_point() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(50.0, 50.0), Vec2::new(50.0, 50.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            Vec2::new(50.0, 50.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 50, 50), palette::GREEN);
     }
 
     #[test]
     fn line_no_gaps_horizontal() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(10.0, 50.0), Vec2::new(90.0, 50.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(10.0, 50.0),
+            Vec2::new(90.0, 50.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         for x in 10..=90 {
             assert_eq!(pixel_at(&f, x, 50), palette::GREEN, "gap at x={x}");
         }
@@ -125,7 +167,14 @@ mod tests {
     #[test]
     fn line_no_gaps_vertical() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(50.0, 10.0), Vec2::new(50.0, 90.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(50.0, 10.0),
+            Vec2::new(50.0, 90.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         for y in 10..=90 {
             assert_eq!(pixel_at(&f, 50, y), palette::GREEN, "gap at y={y}");
         }
@@ -134,8 +183,18 @@ mod tests {
     #[test]
     fn line_steep_slope_continuous() {
         let mut f = make_frame();
-        draw_line(&mut f, Vec2::new(45.0, 10.0), Vec2::new(55.0, 90.0), palette::GREEN, WIDTH, HEIGHT);
+        draw_line(
+            &mut f,
+            Vec2::new(45.0, 10.0),
+            Vec2::new(55.0, 90.0),
+            palette::GREEN,
+            WIDTH,
+            HEIGHT,
+        );
         let filled = count_pixels_with_color(&f, palette::GREEN);
-        assert!(filled >= 75, "Steep line should have ~80 pixels, got {filled}");
+        assert!(
+            filled >= 75,
+            "Steep line should have ~80 pixels, got {filled}"
+        );
     }
 }

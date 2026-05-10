@@ -20,25 +20,57 @@ pub struct Vec3 {
 
 impl Vec3 {
     /// Zero vector `(0, 0, 0)`.
-    pub const ZERO: Self = Self { x: 0.0, y: 0.0, z: 0.0 };
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     /// One vector `(1, 1, 1)`.
-    pub const ONE: Self = Self { x: 1.0, y: 1.0, z: 1.0 };
+    pub const ONE: Self = Self {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0,
+    };
     /// Unit X `(1, 0, 0)`.
-    pub const X: Self = Self { x: 1.0, y: 0.0, z: 0.0 };
+    pub const X: Self = Self {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    };
     /// Unit Y `(0, 1, 0)`.
-    pub const Y: Self = Self { x: 0.0, y: 1.0, z: 0.0 };
+    pub const Y: Self = Self {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    };
     /// Unit Z `(0, 0, 1)`.
-    pub const Z: Self = Self { x: 0.0, y: 0.0, z: 1.0 };
+    pub const Z: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    };
     /// Up `(0, 1, 0)`.
     pub const UP: Self = Self::Y;
     /// Down `(0, -1, 0)`.
-    pub const DOWN: Self = Self { x: 0.0, y: -1.0, z: 0.0 };
+    pub const DOWN: Self = Self {
+        x: 0.0,
+        y: -1.0,
+        z: 0.0,
+    };
     /// Left `(-1, 0, 0)`.
-    pub const LEFT: Self = Self { x: -1.0, y: 0.0, z: 0.0 };
+    pub const LEFT: Self = Self {
+        x: -1.0,
+        y: 0.0,
+        z: 0.0,
+    };
     /// Right `(1, 0, 0)`.
     pub const RIGHT: Self = Self::X;
     /// Forward in right-handed Y-up: `(0, 0, -1)`.
-    pub const FORWARD: Self = Self { x: 0.0, y: 0.0, z: -1.0 };
+    pub const FORWARD: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: -1.0,
+    };
     /// Back in right-handed Y-up: `(0, 0, 1)`.
     pub const BACK: Self = Self::Z;
 
@@ -127,13 +159,21 @@ impl Vec3 {
     /// Per-component minimum.
     #[inline]
     pub fn min(&self, other: Self) -> Self {
-        Self::new(self.x.min(other.x), self.y.min(other.y), self.z.min(other.z))
+        Self::new(
+            self.x.min(other.x),
+            self.y.min(other.y),
+            self.z.min(other.z),
+        )
     }
 
     /// Per-component maximum.
     #[inline]
     pub fn max(&self, other: Self) -> Self {
-        Self::new(self.x.max(other.x), self.y.max(other.y), self.z.max(other.z))
+        Self::new(
+            self.x.max(other.x),
+            self.y.max(other.y),
+            self.z.max(other.z),
+        )
     }
 
     /// Project this vector onto `axis` (does not assume unit length).
@@ -451,7 +491,10 @@ mod tests {
     fn projection_onto_axis() {
         // Projecting (3, 4, 0) onto X yields (3, 0, 0).
         let v = Vec3::new(3.0, 4.0, 0.0);
-        assert!(vec_approx(v.project_onto(Vec3::X), Vec3::new(3.0, 0.0, 0.0)));
+        assert!(vec_approx(
+            v.project_onto(Vec3::X),
+            Vec3::new(3.0, 0.0, 0.0)
+        ));
     }
 
     #[test]

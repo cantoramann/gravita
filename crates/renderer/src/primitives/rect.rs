@@ -34,13 +34,7 @@ impl PixelRect {
 ///
 /// The rectangle covers `[x, x + w) × [y, y + h)` in screen-space pixels and
 /// is clipped to `[0, width) × [0, height)`.
-pub fn draw_rect_filled(
-    frame: &mut [u8],
-    rect: PixelRect,
-    color: Color,
-    width: u32,
-    height: u32,
-) {
+pub fn draw_rect_filled(frame: &mut [u8], rect: PixelRect, color: Color, width: u32, height: u32) {
     if rect.w <= 0 || rect.h <= 0 {
         return;
     }
@@ -91,13 +85,7 @@ pub fn draw_rect_filled_alpha(
 }
 
 /// Draw a 1-pixel rectangle outline.
-pub fn draw_rect_stroke(
-    frame: &mut [u8],
-    rect: PixelRect,
-    color: Color,
-    width: u32,
-    height: u32,
-) {
+pub fn draw_rect_stroke(frame: &mut [u8], rect: PixelRect, color: Color, width: u32, height: u32) {
     if rect.w <= 0 || rect.h <= 0 {
         return;
     }
@@ -166,9 +154,21 @@ mod tests {
     fn filled_rect_alpha_blends_over_background() {
         let mut f = make_frame();
         // Start with opaque white background
-        draw_rect_filled(&mut f, PixelRect::new(0, 0, W as i32, H as i32), palette::WHITE, W, H);
+        draw_rect_filled(
+            &mut f,
+            PixelRect::new(0, 0, W as i32, H as i32),
+            palette::WHITE,
+            W,
+            H,
+        );
         // Blend 50% red on top
-        draw_rect_filled_alpha(&mut f, PixelRect::new(2, 2, 4, 4), [0xff, 0x00, 0x00, 0x80], W, H);
+        draw_rect_filled_alpha(
+            &mut f,
+            PixelRect::new(2, 2, 4, 4),
+            [0xff, 0x00, 0x00, 0x80],
+            W,
+            H,
+        );
         // Pixel inside should be mixed (high R, lower G/B), not pure white or pure red
         let mid = pixel_at(&f, 4, 4);
         assert!(mid[0] > 200, "R should remain high");

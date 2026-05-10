@@ -112,7 +112,8 @@ pub mod prelude {
     pub use gravita_physics_3d::{
         BodyType as BodyType3D, CollisionShape as CollisionShape3D, Contact as Contact3D,
         PhysicsWorld as PhysicsWorld3D, RigidBody as RigidBody3D,
-        SemiImplicitEuler as SemiImplicitEuler3D, SimpleCollisionDetector as SimpleCollisionDetector3D,
+        SemiImplicitEuler as SemiImplicitEuler3D,
+        SimpleCollisionDetector as SimpleCollisionDetector3D,
     };
     // Renderer types
     #[cfg(feature = "renderer")]
@@ -122,7 +123,6 @@ pub mod prelude {
     #[cfg(feature = "renderer-3d")]
     pub use gravita_renderer_3d::{
         App3D, Camera as Camera3D, Instance as Instance3D, Mesh as Mesh3D,
-        MeshHandle as MeshHandle3D, Renderer3D, WindowConfig as WindowConfig3D,
-        run as run_3d,
+        MeshHandle as MeshHandle3D, Renderer3D, WindowConfig as WindowConfig3D, run as run_3d,
     };
 }

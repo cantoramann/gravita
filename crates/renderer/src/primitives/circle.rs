@@ -124,35 +124,70 @@ mod tests {
     #[test]
     fn circle_at_center() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), 10.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            10.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 50, 50), palette::RED);
     }
 
     #[test]
     fn circle_does_not_affect_outside() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), 5.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            5.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 0, 0), [0, 0, 0, 0]);
     }
 
     #[test]
     fn circle_clipped_at_edge() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(-5.0, 50.0), 10.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(-5.0, 50.0),
+            10.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 0, 50), palette::RED);
     }
 
     #[test]
     fn circle_completely_outside_does_not_panic() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(-100.0, -100.0), 10.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(-100.0, -100.0),
+            10.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 0, 0), [0, 0, 0, 0]);
     }
 
     #[test]
     fn circle_zero_radius_paints_center() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), 0.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            0.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 50, 50), palette::RED);
     }
 
@@ -160,20 +195,35 @@ mod tests {
     fn circle_area_matches_pi_r_squared() {
         let mut f = make_frame();
         let radius = 10.0;
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), radius, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            radius,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         let filled = count_pixels_with_color(&f, palette::RED);
         let expected = std::f32::consts::PI * radius * radius;
         let tolerance = expected * 0.15;
         assert!(
             (filled as f32 - expected).abs() < tolerance,
-            "Circle area mismatch: got {filled} pixels, expected ~{expected:.0} (\u{00b1}{tolerance:.0})"
+            "Circle area mismatch: got {filled} pixels, expected ~{expected:.0} \
+             (\u{00b1}{tolerance:.0})"
         );
     }
 
     #[test]
     fn circle_is_symmetric_horizontally() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), 15.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            15.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         for offset in 1..=14 {
             assert_eq!(
                 pixel_at(&f, 50 - offset, 50),
@@ -186,7 +236,14 @@ mod tests {
     #[test]
     fn circle_is_symmetric_vertically() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), 15.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            15.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         for offset in 1..=14 {
             assert_eq!(
                 pixel_at(&f, 50, 50 - offset),
@@ -199,7 +256,14 @@ mod tests {
     #[test]
     fn circle_boundary_pixels_inside_radius_painted() {
         let mut f = make_frame();
-        draw_circle(&mut f, Vec2::new(50.0, 50.0), 10.0, palette::RED, WIDTH, HEIGHT);
+        draw_circle(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            10.0,
+            palette::RED,
+            WIDTH,
+            HEIGHT,
+        );
         assert_eq!(pixel_at(&f, 50, 41), palette::RED);
         assert_eq!(pixel_at(&f, 50, 59), palette::RED);
         assert_eq!(pixel_at(&f, 41, 50), palette::RED);
@@ -224,7 +288,14 @@ mod tests {
             px.copy_from_slice(&palette::WHITE);
         }
         // Half-alpha red circle
-        draw_circle_alpha(&mut f, Vec2::new(50.0, 50.0), 10.0, [0xff, 0x00, 0x00, 0x80], WIDTH, HEIGHT);
+        draw_circle_alpha(
+            &mut f,
+            Vec2::new(50.0, 50.0),
+            10.0,
+            [0xff, 0x00, 0x00, 0x80],
+            WIDTH,
+            HEIGHT,
+        );
         let mid = pixel_at(&f, 50, 50);
         // R stays high (both src and dst contribute), G/B drop to ~half.
         assert!(mid[0] > 200);

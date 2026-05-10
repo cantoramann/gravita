@@ -82,10 +82,12 @@ impl App3D for CubeDemo {
 
         let cube_transform = Transform3D::IDENTITY
             .with_position(Vec3::new(0.0, 1.0, 0.0))
-            .with_rotation(Quat::from_axis_angle(Vec3::new(0.3, 1.0, 0.2).normalize(), self.angle));
+            .with_rotation(Quat::from_axis_angle(
+                Vec3::new(0.3, 1.0, 0.2).normalize(),
+                self.angle,
+            ));
 
-        let plane_transform =
-            Transform3D::IDENTITY.with_position(Vec3::new(0.0, -1.0, 0.0));
+        let plane_transform = Transform3D::IDENTITY.with_position(Vec3::new(0.0, -1.0, 0.0));
 
         let instances = [
             Instance {

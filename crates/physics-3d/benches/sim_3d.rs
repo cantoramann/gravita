@@ -103,11 +103,7 @@ fn bench_obb_sat(c: &mut Criterion) {
     group.bench_function("obb_obb_overlap", |bench| {
         bench.iter(|| test_obb_obb(black_box(&a), black_box(&b), 0, 1));
     });
-    let b_far = Obb::new(
-        Vec3::new(20.0, 0.0, 0.0),
-        Vec3::splat(1.0),
-        Quat::IDENTITY,
-    );
+    let b_far = Obb::new(Vec3::new(20.0, 0.0, 0.0), Vec3::splat(1.0), Quat::IDENTITY);
     group.bench_function("obb_obb_no_overlap", |bench| {
         bench.iter(|| test_obb_obb(black_box(&a), black_box(&b_far), 0, 1));
     });

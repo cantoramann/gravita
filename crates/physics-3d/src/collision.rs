@@ -47,12 +47,7 @@ impl Contact {
 }
 
 /// Sphere–Sphere narrow phase. Bodies passed as translated world-space spheres.
-pub fn test_sphere_sphere(
-    a: &Sphere,
-    b: &Sphere,
-    a_idx: usize,
-    b_idx: usize,
-) -> Option<Contact> {
+pub fn test_sphere_sphere(a: &Sphere, b: &Sphere, a_idx: usize, b_idx: usize) -> Option<Contact> {
     let delta = b.center - a.center;
     let r_sum = a.radius + b.radius;
     let dist_sq = delta.length_squared();
@@ -189,7 +184,11 @@ pub fn test_obb_obb(a: &Obb, b: &Obb, ai: usize, bi: usize) -> Option<Contact> {
         }
     }
     // Translation expressed in A's local frame.
-    let t = [t_world.dot(ax_a[0]), t_world.dot(ax_a[1]), t_world.dot(ax_a[2])];
+    let t = [
+        t_world.dot(ax_a[0]),
+        t_world.dot(ax_a[1]),
+        t_world.dot(ax_a[2]),
+    ];
 
     let mut min_overlap = f32::INFINITY;
     let mut best_normal = Vec3::Y;
@@ -276,12 +275,7 @@ pub fn test_obb_obb(a: &Obb, b: &Obb, ai: usize, bi: usize) -> Option<Contact> {
 }
 
 /// AABB–AABB narrow phase using the axis of minimum penetration.
-pub fn test_aabb_aabb(
-    a: &Aabb3,
-    b: &Aabb3,
-    a_idx: usize,
-    b_idx: usize,
-) -> Option<Contact> {
+pub fn test_aabb_aabb(a: &Aabb3, b: &Aabb3, a_idx: usize, b_idx: usize) -> Option<Contact> {
     let ox = a.max.x.min(b.max.x) - a.min.x.max(b.min.x);
     let oy = a.max.y.min(b.max.y) - a.min.y.max(b.min.y);
     let oz = a.max.z.min(b.max.z) - a.min.z.max(b.min.z);
@@ -320,20 +314,16 @@ pub fn test_pair(bodies: &[RigidBody], i: usize, j: usize, out: &mut Vec<Contact
     let world_obb = |body: &RigidBody, o: &Obb| -> Obb {
         Obb::new(o.center + body.position, o.half_extents, o.rotation)
     };
-    let world_aabb_as_obb = |body: &RigidBody, a: &Aabb3| -> Obb {
-        a.translate(body.position).to_obb()
-    };
+    let world_aabb_as_obb =
+        |body: &RigidBody, a: &Aabb3| -> Obb { a.translate(body.position).to_obb() };
     let world_sphere = |body: &RigidBody, s: &Sphere| -> Sphere {
         Sphere::new(body.position + s.center, s.radius)
     };
 
     let contact = match (&body_a.shape, &body_b.shape) {
-        (CollisionShape::Sphere(sa), CollisionShape::Sphere(sb)) => test_sphere_sphere(
-            &world_sphere(body_a, sa),
-            &world_sphere(body_b, sb),
-            i,
-            j,
-        ),
+        (CollisionShape::Sphere(sa), CollisionShape::Sphere(sb)) => {
+            test_sphere_sphere(&world_sphere(body_a, sa), &world_sphere(body_b, sb), i, j)
+        },
         (CollisionShape::Aabb(aa), CollisionShape::Aabb(ab)) => test_aabb_aabb(
             &aa.translate(body_a.position),
             &ab.translate(body_b.position),
@@ -356,40 +346,24 @@ pub fn test_pair(bodies: &[RigidBody], i: usize, j: usize, out: &mut Vec<Contact
             c.flip();
             c
         }),
-        (CollisionShape::Sphere(s), CollisionShape::Obb(o)) => test_sphere_obb(
-            &world_sphere(body_a, s),
-            &world_obb(body_b, o),
-            i,
-            j,
-        ),
-        (CollisionShape::Obb(o), CollisionShape::Sphere(s)) => test_sphere_obb(
-            &world_sphere(body_b, s),
-            &world_obb(body_a, o),
-            j,
-            i,
-        )
-        .map(|mut c| {
-            c.flip();
-            c
-        }),
-        (CollisionShape::Obb(oa), CollisionShape::Obb(ob)) => test_obb_obb(
-            &world_obb(body_a, oa),
-            &world_obb(body_b, ob),
-            i,
-            j,
-        ),
-        (CollisionShape::Aabb(aa), CollisionShape::Obb(ob)) => test_obb_obb(
-            &world_aabb_as_obb(body_a, aa),
-            &world_obb(body_b, ob),
-            i,
-            j,
-        ),
-        (CollisionShape::Obb(oa), CollisionShape::Aabb(ab)) => test_obb_obb(
-            &world_obb(body_a, oa),
-            &world_aabb_as_obb(body_b, ab),
-            i,
-            j,
-        ),
+        (CollisionShape::Sphere(s), CollisionShape::Obb(o)) => {
+            test_sphere_obb(&world_sphere(body_a, s), &world_obb(body_b, o), i, j)
+        },
+        (CollisionShape::Obb(o), CollisionShape::Sphere(s)) => {
+            test_sphere_obb(&world_sphere(body_b, s), &world_obb(body_a, o), j, i).map(|mut c| {
+                c.flip();
+                c
+            })
+        },
+        (CollisionShape::Obb(oa), CollisionShape::Obb(ob)) => {
+            test_obb_obb(&world_obb(body_a, oa), &world_obb(body_b, ob), i, j)
+        },
+        (CollisionShape::Aabb(aa), CollisionShape::Obb(ob)) => {
+            test_obb_obb(&world_aabb_as_obb(body_a, aa), &world_obb(body_b, ob), i, j)
+        },
+        (CollisionShape::Obb(oa), CollisionShape::Aabb(ab)) => {
+            test_obb_obb(&world_obb(body_a, oa), &world_aabb_as_obb(body_b, ab), i, j)
+        },
     };
 
     if let Some(mut c) = contact {
@@ -495,7 +469,11 @@ mod tests {
     #[test]
     fn obb_obb_separate_no_contact() {
         let a = Obb::new(Vec3::ZERO, Vec3::splat(1.0), gravita_math::Quat::IDENTITY);
-        let b = Obb::new(Vec3::new(5.0, 0.0, 0.0), Vec3::splat(1.0), gravita_math::Quat::IDENTITY);
+        let b = Obb::new(
+            Vec3::new(5.0, 0.0, 0.0),
+            Vec3::splat(1.0),
+            gravita_math::Quat::IDENTITY,
+        );
         assert!(test_obb_obb(&a, &b, 0, 1).is_none());
     }
 
@@ -504,9 +482,17 @@ mod tests {
         // Two axis-aligned OBBs overlapping by 0.5 along X should produce a
         // contact with normal ±X and penetration 0.5.
         let a = Obb::new(Vec3::ZERO, Vec3::splat(1.0), gravita_math::Quat::IDENTITY);
-        let b = Obb::new(Vec3::new(1.5, 0.0, 0.0), Vec3::splat(1.0), gravita_math::Quat::IDENTITY);
+        let b = Obb::new(
+            Vec3::new(1.5, 0.0, 0.0),
+            Vec3::splat(1.0),
+            gravita_math::Quat::IDENTITY,
+        );
         let c = test_obb_obb(&a, &b, 0, 1).unwrap();
-        assert!((c.penetration - 0.5).abs() < 1e-4, "penetration={}", c.penetration);
+        assert!(
+            (c.penetration - 0.5).abs() < 1e-4,
+            "penetration={}",
+            c.penetration
+        );
         assert!((c.normal.x.abs() - 1.0).abs() < 1e-4);
     }
 
@@ -596,8 +582,7 @@ mod tests {
     fn detector_skips_static_static() {
         use crate::body::{BodyType as BT, CollisionShape as CS, RigidBody};
         let bodies = vec![
-            RigidBody::new(0, CS::Sphere(Sphere::new(Vec3::ZERO, 1.0)))
-                .with_type(BT::Static),
+            RigidBody::new(0, CS::Sphere(Sphere::new(Vec3::ZERO, 1.0))).with_type(BT::Static),
             RigidBody::new(1, CS::Sphere(Sphere::new(Vec3::ZERO, 1.0)))
                 .with_type(BT::Static)
                 .with_position(Vec3::new(0.5, 0.0, 0.0)),

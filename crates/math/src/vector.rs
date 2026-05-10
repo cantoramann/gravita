@@ -32,12 +32,7 @@ use std::ops::{Add, Mul, Sub};
 /// provides defaulted helpers (`length`, `normalize`, `distance`, `lerp`,
 /// `reflect`) so implementations only need to supply the primitives.
 pub trait Vector:
-    Sized
-    + Copy
-    + Default
-    + Add<Output = Self>
-    + Sub<Output = Self>
-    + Mul<f32, Output = Self>
+    Sized + Copy + Default + Add<Output = Self> + Sub<Output = Self> + Mul<f32, Output = Self>
 {
     /// The zero vector.
     const ZERO: Self;
@@ -58,7 +53,11 @@ pub trait Vector:
     /// Unit-length copy. Returns [`Self::ZERO`] for the zero vector.
     fn normalize(self) -> Self {
         let len = self.length();
-        if len > 0.0 { self * (1.0 / len) } else { Self::ZERO }
+        if len > 0.0 {
+            self * (1.0 / len)
+        } else {
+            Self::ZERO
+        }
     }
 
     /// Euclidean distance.

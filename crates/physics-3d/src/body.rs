@@ -218,7 +218,10 @@ impl RigidBody {
     /// Builder: compute mass + inertia from a uniform density.
     #[must_use]
     pub fn with_density(mut self, density: f32) -> Self {
-        debug_assert!(density > 0.0 && density.is_finite(), "bad density: {density}");
+        debug_assert!(
+            density > 0.0 && density.is_finite(),
+            "bad density: {density}"
+        );
         self.mass = self.shape.mass(density);
         self.inertia = self.shape.inertia(self.mass);
         self.update_mass_properties();
@@ -356,11 +359,27 @@ impl RigidBody {
                 self.inv_inertia = Vec3::ZERO;
             },
             BodyType::Dynamic => {
-                self.inv_mass = if self.mass > 0.0 { 1.0 / self.mass } else { 0.0 };
+                self.inv_mass = if self.mass > 0.0 {
+                    1.0 / self.mass
+                } else {
+                    0.0
+                };
                 self.inv_inertia = Vec3::new(
-                    if self.inertia.x > 0.0 { 1.0 / self.inertia.x } else { 0.0 },
-                    if self.inertia.y > 0.0 { 1.0 / self.inertia.y } else { 0.0 },
-                    if self.inertia.z > 0.0 { 1.0 / self.inertia.z } else { 0.0 },
+                    if self.inertia.x > 0.0 {
+                        1.0 / self.inertia.x
+                    } else {
+                        0.0
+                    },
+                    if self.inertia.y > 0.0 {
+                        1.0 / self.inertia.y
+                    } else {
+                        0.0
+                    },
+                    if self.inertia.z > 0.0 {
+                        1.0 / self.inertia.z
+                    } else {
+                        0.0
+                    },
                 );
             },
         }

@@ -1,7 +1,9 @@
 use gravita_example_shim::{App, Input, ShimKeyCode, ShimMouseButton, WindowConfig, run};
 use gravita_math::{Aabb, Circle, Vec2};
 use gravita_physics::{BodyType, CollisionShape, PhysicsWorld, RigidBody};
-use gravita_renderer::{Color, PixelRect, clear, draw_circle, draw_line, draw_rect_filled, palette};
+use gravita_renderer::{
+    Color, PixelRect, clear, draw_circle, draw_line, draw_rect_filled, palette,
+};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -88,7 +90,10 @@ impl Demo {
             let center = aabb.center();
             let direction = Vec2::new(rotation.cos(), rotation.sin()) * 20.0;
             let start = Vec2::new(center.x, HEIGHT as f32 - center.y);
-            let end = Vec2::new(center.x + direction.x, HEIGHT as f32 - (center.y + direction.y));
+            let end = Vec2::new(
+                center.x + direction.x,
+                HEIGHT as f32 - (center.y + direction.y),
+            );
             draw_line(frame, start, end, palette::YELLOW, WIDTH, HEIGHT);
         }
     }
