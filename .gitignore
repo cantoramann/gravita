@@ -1,2 +1,5 @@
 target/
 .env
+
+# Claude Code session state, worktrees, and project-local config
+.claude/
