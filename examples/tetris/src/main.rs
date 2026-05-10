@@ -1695,8 +1695,6 @@ impl ApplicationHandler for App {
 // ============================================================================
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
-
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Poll);
 

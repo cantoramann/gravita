@@ -13,6 +13,11 @@
 //! python3 -m http.server 8080
 //! # Open http://localhost:8080
 //! ```
+//!
+//! The entire crate is gated to `target_arch = "wasm32"` — on native targets
+//! it compiles to an empty hull so that `cargo build --workspace` doesn't have
+//! to pull `wasm-bindgen` / `web-sys` / `js-sys` / `console_error_panic_hook`.
+#![cfg(target_arch = "wasm32")]
 
 use std::{cell::RefCell, rc::Rc};
 

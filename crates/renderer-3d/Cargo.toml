@@ -13,9 +13,7 @@ workspace = true
 [dependencies]
 gravita-math = { workspace = true }
 
-bytemuck = { version = "1.16", features = ["derive"] }
-env_logger = { workspace = true }
-log = { workspace = true }
+bytemuck = "1.16"
 pollster = "0.3"
 wgpu = "0.19"
 winit = { workspace = true }

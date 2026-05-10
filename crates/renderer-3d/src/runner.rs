@@ -3,13 +3,16 @@
 //! Mirrors the structure of `gravita-example-shim` but constructs a
 //! `Renderer3D` (with a real `wgpu` surface) instead of a `pixels` framebuffer.
 
+// Diagnostic errors during window/surface setup go to stderr — no log
+// subscriber is wired up in the example scaffolding.
+#![allow(clippy::print_stderr)]
+
 use std::{
     collections::HashSet,
     sync::Arc,
     time::{Duration, Instant},
 };
 
-use log::error;
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
@@ -135,7 +138,7 @@ impl<A: App3D> ApplicationHandler for Runner<A> {
         let window = match event_loop.create_window(attrs) {
             Ok(w) => Arc::new(w),
             Err(err) => {
-                error!("create_window failed: {err}");
+                eprintln!("create_window failed: {err}");
                 event_loop.exit();
                 return;
             },
@@ -143,7 +146,7 @@ impl<A: App3D> ApplicationHandler for Runner<A> {
         let renderer = match Renderer3D::new(Arc::clone(&window)) {
             Ok(r) => r,
             Err(err) => {
-                error!("Renderer3D::new failed: {err}");
+                eprintln!("Renderer3D::new failed: {err}");
                 event_loop.exit();
                 return;
             },
@@ -245,7 +248,6 @@ impl<A: App3D> ApplicationHandler for Runner<A> {
 
 /// Build the window, initialise wgpu, and drive an [`App3D`].
 pub fn run<A: App3D>(config: WindowConfig, app: A) -> Result<(), Box<dyn std::error::Error>> {
-    let _ = env_logger::try_init();
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut runner = Runner::new(config, app);

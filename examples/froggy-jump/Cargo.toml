@@ -11,12 +11,15 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 gravita-math = { workspace = true }
 
-# WASM dependencies
+# WASM-only dependencies — skipped entirely on native builds so that
+# `cargo build --workspace` doesn't compile ~8 crates and ~40MB of rlibs
+# that the native target can never use.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 console_error_panic_hook = "0.1"
 
-[dependencies.web-sys]
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3"
 features = [
     "CssStyleDeclaration",

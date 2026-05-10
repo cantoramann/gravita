@@ -62,13 +62,10 @@ gravita-assets = { version = "0.1.0", path = "crates/assets" }
 gravita-example-shim = { path = "crates/example-shim" }
 gravita-renderer-3d = { path = "crates/renderer-3d" }
 
-approx = "0.5"              # For floating point comparisons in tests
-criterion = "0.5"           # Benchmarking framework
-env_logger = "0.11"
-log = "0.4"
-pixels = "0.15"
-rand = "0.8"                # Random number generation
-winit = "0.30.12"           # Window management
+criterion = "0.5"           # Benchmarking framework (dev-only)
+pixels = "0.15"             # CPU framebuffer-to-window blitting (2D)
+rand = "0.8"                # Random number generation (tetris + physics benches)
+winit = "0.30.12"           # Cross-platform window + event loop
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Workspace-wide lint configuration

@@ -12,8 +12,6 @@ path = "src/main.rs"
 [dependencies]
 gravita-math = { workspace = true }
 gravita-renderer = { workspace = true }
-log = { workspace = true }
-env_logger = { workspace = true }
 pixels = { workspace = true }
 winit = { workspace = true }
 rand = "0.8"

@@ -32,13 +32,15 @@
 //! - Uses [`ControlFlow::WaitUntil`] between frames so the example doesn't pin a CPU core at 100%.
 
 #![warn(missing_docs)]
+// Diagnostic errors (window creation, surface rendering) go to stderr.
+// Acceptable in example scaffolding where there is no log subscriber wired up.
+#![allow(clippy::print_stderr)]
 
 use std::{
     collections::HashSet,
     time::{Duration, Instant},
 };
 
-use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     application::ApplicationHandler,
@@ -183,7 +185,7 @@ impl<A: App> ApplicationHandler for Runner<A> {
         let window = match event_loop.create_window(attrs) {
             Ok(w) => Box::leak(Box::new(w)),
             Err(err) => {
-                error!("create_window failed: {err}");
+                eprintln!("create_window failed: {err}");
                 event_loop.exit();
                 return;
             },
@@ -193,7 +195,7 @@ impl<A: App> ApplicationHandler for Runner<A> {
         let pixels = match Pixels::new(self.config.width, self.config.height, surface) {
             Ok(p) => p,
             Err(err) => {
-                error!("Pixels::new failed: {err}");
+                eprintln!("Pixels::new failed: {err}");
                 event_loop.exit();
                 return;
             },
@@ -249,7 +251,7 @@ impl<A: App> ApplicationHandler for Runner<A> {
                 if let Some(pixels) = self.pixels.as_mut() {
                     self.app.render(pixels.frame_mut());
                     if let Err(err) = pixels.render() {
-                        error!("pixels.render() failed: {err}");
+                        eprintln!("pixels.render() failed: {err}");
                         event_loop.exit();
                     }
                 }
@@ -260,7 +262,7 @@ impl<A: App> ApplicationHandler for Runner<A> {
                         .resize_surface(new_size.width, new_size.height)
                         .is_err()
                 {
-                    error!("pixels.resize_surface failed");
+                    eprintln!("pixels.resize_surface failed");
                     event_loop.exit();
                 }
             },
@@ -309,8 +311,6 @@ impl<A: App> ApplicationHandler for Runner<A> {
 /// Run the example loop: create a window, drive `app` with fixed-timestep
 /// updates, and render each frame.
 pub fn run<A: App>(config: WindowConfig, app: A) -> Result<(), Box<dyn std::error::Error>> {
-    // Best-effort: examples are often re-run within the same process during dev.
-    let _ = env_logger::try_init();
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut runner = Runner::new(config, app);
