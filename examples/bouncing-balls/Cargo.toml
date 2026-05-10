@@ -1,20 +1,15 @@
-# examples/Cargo.toml
+# examples/bouncing-balls/Cargo.toml
 [package]
 name = "bouncing-balls"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 publish = false
 
 [dependencies]
 gravita-physics = { workspace = true }
 gravita-math = { workspace = true }
 gravita-renderer = { workspace = true }
-
-env_logger = { workspace = true }
-log = { workspace = true }
-pixels = { workspace = true }
-winit = { workspace = true }
-winit_input_helper = { workspace = true }
+gravita-example-shim = { workspace = true }
 
 [[bin]]
 name = "bouncing-balls"

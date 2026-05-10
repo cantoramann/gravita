@@ -1,14 +1,10 @@
 [package]
 name = "rotating-rod"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 publish = false
 
 [dependencies]
 gravita-math = { workspace = true }
 gravita-renderer = { workspace = true }
-
-env_logger = { workspace = true }
-log = { workspace = true }
-pixels = { workspace = true }
-winit = { workspace = true }
+gravita-example-shim = { workspace = true }

@@ -4,7 +4,7 @@
 //!
 //! Gravita provides everything you need to build 2D games and physics simulations:
 //!
-//! - **Math primitives**: Vectors, transforms, shapes (AABB, Circle, Ray)
+//! - **Math primitives**: Vectors, transforms, shapes (Aabb, Circle, Ray)
 //! - **Physics simulation**: Rigid body dynamics, collision detection and response
 //! - **Rendering utilities**: Simple CPU-based 2D drawing primitives
 //! - **Game objects**: Pre-built entities like Stickman, Spaceship, Planet
@@ -39,7 +39,7 @@
 //!
 //! | Feature | Default | Description |
 //! |---------|---------|-------------|
-//! | `math` | ✅ | 2D math primitives (Vec2, AABB, Circle, etc.) |
+//! | `math` | ✅ | 2D math primitives (Vec2, Aabb, Circle, etc.) |
 //! | `physics` | ✅ | Physics engine (RigidBody, PhysicsWorld, etc.) |
 //! | `renderer` | ✅ | CPU-based 2D rendering utilities |
 //! | `collections` | ❌ | Pre-built game objects (Stickman, Spaceship) |
@@ -92,7 +92,7 @@ pub mod prelude {
     #[cfg(feature = "collections")]
     pub use gravita_collections::{Planet, Spaceship, Stickman};
     #[cfg(feature = "math")]
-    pub use gravita_math::{AABB, Circle, PI, Ray2D, TAU, Transform2D, Vec2};
+    pub use gravita_math::{Aabb, Circle, PI, Ray2D, TAU, Transform2D, Vec2};
     // Physics types
     #[cfg(feature = "physics")]
     pub use gravita_physics::{

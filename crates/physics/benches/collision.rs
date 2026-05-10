@@ -4,7 +4,7 @@
 //! Run with: `cargo bench -p gravita-physics -- collision`
 
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
-use gravita_math::{AABB, Circle, Vec2};
+use gravita_math::{Aabb, Circle, Vec2};
 use gravita_physics::{
     CollisionShape, RigidBody,
     collision::{
@@ -39,7 +39,7 @@ fn create_random_aabb_bodies(count: usize, area_size: f32) -> Vec<RigidBody> {
             let y = rng.gen_range(0.0..area_size);
             let w = rng.gen_range(10.0..30.0);
             let h = rng.gen_range(10.0..30.0);
-            let shape = CollisionShape::AABB(AABB::new(
+            let shape = CollisionShape::Aabb(Aabb::new(
                 Vec2::new(-w / 2.0, -h / 2.0),
                 Vec2::new(w / 2.0, h / 2.0),
             ));
@@ -68,22 +68,22 @@ fn bench_narrow_phase(c: &mut Criterion) {
         b.iter(|| test_circle_circle(&black_box(c1), &black_box(c3), 0, 1));
     });
 
-    // AABB-AABB collision test
-    let a1 = AABB::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
-    let a2 = AABB::new(Vec2::new(5.0, 5.0), Vec2::new(15.0, 15.0)); // Overlapping
+    // Aabb-Aabb collision test
+    let a1 = Aabb::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
+    let a2 = Aabb::new(Vec2::new(5.0, 5.0), Vec2::new(15.0, 15.0)); // Overlapping
 
     group.bench_function("aabb_aabb_hit", |b| {
         b.iter(|| test_aabb_aabb(&black_box(a1), &black_box(a2), 0, 1));
     });
 
-    let a3 = AABB::new(Vec2::new(20.0, 20.0), Vec2::new(30.0, 30.0)); // Not overlapping
+    let a3 = Aabb::new(Vec2::new(20.0, 20.0), Vec2::new(30.0, 30.0)); // Not overlapping
     group.bench_function("aabb_aabb_miss", |b| {
         b.iter(|| test_aabb_aabb(&black_box(a1), &black_box(a3), 0, 1));
     });
 
-    // Circle-AABB collision test
+    // Circle-Aabb collision test
     let circle = Circle::new(Vec2::new(12.0, 5.0), 5.0);
-    let aabb = AABB::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
+    let aabb = Aabb::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
 
     group.bench_function("circle_aabb_hit", |b| {
         b.iter(|| test_circle_aabb(&black_box(circle), &black_box(aabb), 0, 1));
@@ -204,7 +204,7 @@ fn bench_mixed_shapes(c: &mut Criterion) {
         let mut bodies = create_random_circle_bodies(half, 500.0);
         let mut aabb_bodies = create_random_aabb_bodies(*body_count - half, 500.0);
 
-        // Renumber AABB bodies
+        // Renumber Aabb bodies
         for (i, body) in aabb_bodies.iter_mut().enumerate() {
             body.id = half + i;
         }

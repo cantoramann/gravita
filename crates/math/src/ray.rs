@@ -1,5 +1,5 @@
 // math/src/ray.rs
-use crate::{aabb::AABB, circle::Circle, vector2::Vec2};
+use crate::{aabb::Aabb, circle::Circle, vector2::Vec2};
 
 /// Infinite ray in 2D, defined by origin and direction.
 #[derive(Debug, Copy, Clone)]
@@ -35,8 +35,8 @@ impl Ray2D {
         self.origin + self.direction * distance
     }
 
-    /// Cast this ray against an AABB, returning the closest hit if any.
-    pub fn cast_aabb(&self, aabb: &AABB) -> Option<RayHit> {
+    /// Cast this ray against an Aabb, returning the closest hit if any.
+    pub fn cast_aabb(&self, aabb: &Aabb) -> Option<RayHit> {
         let inv_dir = Vec2::new(1.0 / self.direction.x, 1.0 / self.direction.y);
 
         let t1 = (aabb.min.x - self.origin.x) * inv_dir.x;
@@ -141,13 +141,13 @@ mod tests {
     }
 
     // =========================================================================
-    // Ray-AABB Intersection
+    // Ray-Aabb Intersection
     // =========================================================================
 
     #[test]
     fn ray_hits_aabb_from_left() {
         let ray = Ray2D::new(Vec2::new(-10.0, 5.0), Vec2::RIGHT);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         let hit = ray.cast_aabb(&aabb).unwrap();
         assert!(approx_eq(hit.distance, 10.0));
         assert!(vec_approx_eq(hit.point, Vec2::new(0.0, 5.0)));
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn ray_hits_aabb_from_bottom() {
         let ray = Ray2D::new(Vec2::new(5.0, -10.0), Vec2::UP);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         let hit = ray.cast_aabb(&aabb).unwrap();
         assert!(approx_eq(hit.distance, 10.0));
         assert!(vec_approx_eq(hit.point, Vec2::new(5.0, 0.0)));
@@ -167,14 +167,14 @@ mod tests {
     #[test]
     fn ray_misses_aabb() {
         let ray = Ray2D::new(Vec2::new(-10.0, 15.0), Vec2::RIGHT);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(ray.cast_aabb(&aabb).is_none());
     }
 
     #[test]
     fn ray_pointing_away_from_aabb_misses() {
         let ray = Ray2D::new(Vec2::new(-10.0, 5.0), Vec2::LEFT);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(ray.cast_aabb(&aabb).is_none());
     }
 

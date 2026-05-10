@@ -1,0 +1,18 @@
+[package]
+name = "gravita-example-shim"
+description = "Internal: winit/pixels runtime + input state used by Gravita examples"
+version = "0.1.0"
+publish = false
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+log = { workspace = true }
+env_logger = { workspace = true }
+pixels = { workspace = true }
+winit = { workspace = true }

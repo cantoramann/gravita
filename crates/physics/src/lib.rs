@@ -12,7 +12,7 @@
 //! - [`PhysicsWorld`] — Container that owns all bodies and steps the simulation
 //! - [`RigidBody`] — A simulated object with position, velocity, and mass
 //! - [`BodyType`] — Classification: Static, Kinematic, or Dynamic
-//! - [`CollisionShape`] — Geometric primitive (Circle or AABB)
+//! - [`CollisionShape`] — Geometric primitive (Circle or Aabb)
 //! - [`Contact`] — Collision information between two bodies
 //!
 //! # Simulation Loop
@@ -29,7 +29,7 @@
 //! # Example
 //!
 //! ```
-//! use gravita_math::{AABB, Circle, Vec2};
+//! use gravita_math::{Aabb, Circle, Vec2};
 //! use gravita_physics::{BodyType, CollisionShape, PhysicsWorld, RigidBody};
 //!
 //! let mut world = PhysicsWorld::new();
@@ -38,7 +38,7 @@
 //! // Add a static ground
 //! let ground = RigidBody::new(
 //!     0,
-//!     CollisionShape::AABB(AABB::from_center_size(Vec2::ZERO, Vec2::new(800.0, 50.0))),
+//!     CollisionShape::Aabb(Aabb::from_center_size(Vec2::ZERO, Vec2::new(800.0, 50.0))),
 //! )
 //! .with_type(BodyType::Static)
 //! .with_position(Vec2::new(400.0, 25.0));

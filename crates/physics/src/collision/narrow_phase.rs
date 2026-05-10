@@ -1,5 +1,5 @@
 // physics/src/collision/narrow_phase.rs
-use gravita_math::{AABB, Circle, Vec2};
+use gravita_math::{Aabb, Circle, Vec2};
 
 use super::contact::Contact;
 
@@ -43,8 +43,8 @@ pub fn test_circle_circle(
 ///
 /// Uses the axis of minimum penetration to determine the contact normal.
 pub fn test_aabb_aabb(
-    aabb_a: &AABB,
-    aabb_b: &AABB,
+    aabb_a: &Aabb,
+    aabb_b: &Aabb,
     body_a_idx: usize,
     body_b_idx: usize,
 ) -> Option<Contact> {
@@ -68,7 +68,7 @@ pub fn test_aabb_aabb(
         contact.penetration = overlap_x;
         contact.normal = Vec2::new(delta.x.signum(), 0.0);
 
-        // Contact point is on the edge of AABB A
+        // Contact point is on the edge of Aabb A
         let x = if delta.x > 0.0 {
             aabb_a.max.x
         } else {
@@ -81,7 +81,7 @@ pub fn test_aabb_aabb(
         contact.penetration = overlap_y;
         contact.normal = Vec2::new(0.0, delta.y.signum());
 
-        // Contact point is on the edge of AABB A
+        // Contact point is on the edge of Aabb A
         let x = center_a.x.clamp(aabb_b.min.x, aabb_b.max.x);
         let y = if delta.y > 0.0 {
             aabb_a.max.y
@@ -94,16 +94,16 @@ pub fn test_aabb_aabb(
     Some(contact)
 }
 
-/// Test collision between a circle and an AABB.
+/// Test collision between a circle and an Aabb.
 ///
-/// The circle is treated as body A and the AABB as body B.
+/// The circle is treated as body A and the Aabb as body B.
 pub fn test_circle_aabb(
     circle: &Circle,
-    aabb: &AABB,
+    aabb: &Aabb,
     circle_idx: usize,
     aabb_idx: usize,
 ) -> Option<Contact> {
-    // Find closest point on AABB to circle center
+    // Find closest point on Aabb to circle center
     let closest = Vec2::new(
         circle.center.x.clamp(aabb.min.x, aabb.max.x),
         circle.center.y.clamp(aabb.min.y, aabb.max.y),
@@ -118,7 +118,7 @@ pub fn test_circle_aabb(
     let mut contact = Contact::new(circle_idx, aabb_idx);
 
     if distance < 0.0001 {
-        // Circle center is inside AABB, find closest edge
+        // Circle center is inside Aabb, find closest edge
         let to_min = circle.center - aabb.min;
         let to_max = aabb.max - circle.center;
 
@@ -142,8 +142,8 @@ pub fn test_circle_aabb(
             contact.point = Vec2::new(circle.center.x, aabb.max.y);
         }
     } else {
-        // Circle center is outside AABB.
-        // Normal should point from circle (body A) towards the AABB (body B),
+        // Circle center is outside Aabb.
+        // Normal should point from circle (body A) towards the Aabb (body B),
         // to stay consistent with the convention "normal points from A to B".
         contact.normal = (closest - circle.center).normalize();
         contact.penetration = circle.radius - distance;
@@ -153,12 +153,17 @@ pub fn test_circle_aabb(
     Some(contact)
 }
 
-/// SAT (Separating Axis Theorem) test for polygons - useful for future extension
-pub struct SATTest;
+/// SAT (Separating Axis Theorem) helpers, scaffolding for polygon support.
+///
+/// Not exposed publicly in v0.1 because the narrow phase only handles
+/// Circle/Aabb pairs. Polygon collision will wire this in.
+#[allow(dead_code)] // scaffolding for upcoming polygon narrow phase
+pub(crate) struct SATTest;
 
+#[allow(dead_code)] // scaffolding for upcoming polygon narrow phase
 impl SATTest {
     /// Get support point - furthest point in given direction
-    pub fn get_support(vertices: &[Vec2], direction: Vec2) -> Vec2 {
+    pub(crate) fn get_support(vertices: &[Vec2], direction: Vec2) -> Vec2 {
         let mut best_point = vertices[0];
         let mut best_projection = vertices[0].dot(direction);
 
@@ -174,7 +179,7 @@ impl SATTest {
     }
 
     /// Project shape onto axis
-    pub fn project(vertices: &[Vec2], axis: Vec2) -> (f32, f32) {
+    pub(crate) fn project(vertices: &[Vec2], axis: Vec2) -> (f32, f32) {
         let mut min = vertices[0].dot(axis);
         let mut max = min;
 
@@ -188,7 +193,7 @@ impl SATTest {
     }
 
     /// Check if projections overlap
-    pub fn overlap(proj_a: (f32, f32), proj_b: (f32, f32)) -> Option<f32> {
+    pub(crate) fn overlap(proj_a: (f32, f32), proj_b: (f32, f32)) -> Option<f32> {
         let overlap = proj_a.1.min(proj_b.1) - proj_a.0.max(proj_b.0);
         if overlap > 0.0 { Some(overlap) } else { None }
     }
@@ -265,20 +270,20 @@ mod tests {
     }
 
     // =========================================================================
-    // AABB-AABB Collision
+    // Aabb-Aabb Collision
     // =========================================================================
 
     #[test]
     fn aabb_aabb_no_collision_when_separated() {
-        let a = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
-        let b = AABB::new(Vec2::new(20.0, 0.0), Vec2::new(30.0, 10.0));
+        let a = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let b = Aabb::new(Vec2::new(20.0, 0.0), Vec2::new(30.0, 10.0));
         assert!(test_aabb_aabb(&a, &b, 0, 1).is_none());
     }
 
     #[test]
     fn aabb_aabb_collision_when_overlapping() {
-        let a = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
-        let b = AABB::new(Vec2::new(5.0, 0.0), Vec2::new(15.0, 10.0));
+        let a = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let b = Aabb::new(Vec2::new(5.0, 0.0), Vec2::new(15.0, 10.0));
         let contact = test_aabb_aabb(&a, &b, 0, 1).unwrap();
         assert_eq!(contact.body_a, 0);
         assert_eq!(contact.body_b, 1);
@@ -288,8 +293,8 @@ mod tests {
     fn aabb_aabb_minimum_penetration_axis() {
         // Box A: 0-10 on X, 0-10 on Y
         // Box B: 8-18 on X, 0-10 on Y (overlaps 2 on X, 10 on Y)
-        let a = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
-        let b = AABB::new(Vec2::new(8.0, 0.0), Vec2::new(18.0, 10.0));
+        let a = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let b = Aabb::new(Vec2::new(8.0, 0.0), Vec2::new(18.0, 10.0));
         let contact = test_aabb_aabb(&a, &b, 0, 1).unwrap();
         // Should separate along X (smaller overlap)
         assert!(approx_eq(contact.penetration, 2.0));
@@ -300,8 +305,8 @@ mod tests {
     fn aabb_aabb_vertical_separation() {
         // Box A: 0-10 on X, 0-10 on Y
         // Box B: 0-10 on X, 8-18 on Y (overlaps 10 on X, 2 on Y)
-        let a = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
-        let b = AABB::new(Vec2::new(0.0, 8.0), Vec2::new(10.0, 18.0));
+        let a = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let b = Aabb::new(Vec2::new(0.0, 8.0), Vec2::new(10.0, 18.0));
         let contact = test_aabb_aabb(&a, &b, 0, 1).unwrap();
         // Should separate along Y (smaller overlap)
         assert!(approx_eq(contact.penetration, 2.0));
@@ -309,20 +314,20 @@ mod tests {
     }
 
     // =========================================================================
-    // Circle-AABB Collision
+    // Circle-Aabb Collision
     // =========================================================================
 
     #[test]
     fn circle_aabb_no_collision_when_separated() {
         let circle = Circle::new(Vec2::new(-15.0, 5.0), 5.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(test_circle_aabb(&circle, &aabb, 0, 1).is_none());
     }
 
     #[test]
     fn circle_aabb_collision_from_left() {
         let circle = Circle::new(Vec2::new(-3.0, 5.0), 5.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         let contact = test_circle_aabb(&circle, &aabb, 0, 1).unwrap();
         assert_eq!(contact.body_a, 0);
         assert_eq!(contact.body_b, 1);
@@ -330,9 +335,9 @@ mod tests {
 
     #[test]
     fn circle_aabb_collision_from_corner() {
-        // Circle near corner of AABB
+        // Circle near corner of Aabb
         let circle = Circle::new(Vec2::new(-3.0, -3.0), 5.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         let contact = test_circle_aabb(&circle, &aabb, 0, 1);
         // Distance from circle center to corner (0,0) = sqrt(18) ≈ 4.24 < 5
         assert!(contact.is_some());
@@ -342,7 +347,7 @@ mod tests {
     fn circle_aabb_no_collision_at_corner() {
         // Circle too far from corner
         let circle = Circle::new(Vec2::new(-5.0, -5.0), 5.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         // Distance from circle center to corner (0,0) = sqrt(50) ≈ 7.07 > 5
         assert!(test_circle_aabb(&circle, &aabb, 0, 1).is_none());
     }
@@ -350,7 +355,7 @@ mod tests {
     #[test]
     fn circle_inside_aabb_collision() {
         let circle = Circle::new(Vec2::new(5.0, 5.0), 2.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         let contact = test_circle_aabb(&circle, &aabb, 0, 1).unwrap();
         // Circle is fully inside, should still detect collision
         assert!(contact.penetration > 0.0);
@@ -485,9 +490,9 @@ mod tests {
 
     #[test]
     fn precision_aabb_aabb_near_touching() {
-        let a = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let a = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         // Gap of 0.0001 on X axis
-        let b = AABB::new(Vec2::new(10.0001, 0.0), Vec2::new(20.0, 10.0));
+        let b = Aabb::new(Vec2::new(10.0001, 0.0), Vec2::new(20.0, 10.0));
         assert!(
             test_aabb_aabb(&a, &b, 0, 1).is_none(),
             "Should not collide with tiny gap"
@@ -496,9 +501,9 @@ mod tests {
 
     #[test]
     fn precision_aabb_aabb_barely_overlapping() {
-        let a = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let a = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         // Overlap of 0.0001 on X axis
-        let b = AABB::new(Vec2::new(9.9999, 0.0), Vec2::new(20.0, 10.0));
+        let b = Aabb::new(Vec2::new(9.9999, 0.0), Vec2::new(20.0, 10.0));
         let contact = test_aabb_aabb(&a, &b, 0, 1);
         assert!(contact.is_some(), "Should collide with tiny overlap");
     }
@@ -506,7 +511,7 @@ mod tests {
     #[test]
     fn precision_circle_aabb_corner_exact() {
         // Circle positioned exactly at corner distance
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         let _corner = Vec2::ZERO;
         let radius = 5.0;
         // Position circle so its edge just touches corner

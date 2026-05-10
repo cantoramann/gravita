@@ -232,14 +232,10 @@ dependencies = [
 name = "bouncing-balls"
 version = "0.1.0"
 dependencies = [
- "env_logger",
+ "gravita-example-shim",
  "gravita-math",
  "gravita-physics",
  "gravita-renderer",
- "log",
- "pixels",
- "winit",
- "winit_input_helper",
 ]
 
 [[package]]
@@ -849,6 +845,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gravita-example-shim"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "pixels",
+ "winit",
+]
+
+[[package]]
 name = "gravita-input"
 version = "0.1.0"
 
@@ -880,14 +886,10 @@ dependencies = [
 name = "gravity-arena"
 version = "0.1.0"
 dependencies = [
- "env_logger",
  "gravita-collections",
+ "gravita-example-shim",
  "gravita-math",
  "gravita-renderer",
- "log",
- "pixels",
- "winit",
- "winit_input_helper",
 ]
 
 [[package]]
@@ -1855,12 +1857,9 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 name = "rotating-rod"
 version = "0.1.0"
 dependencies = [
- "env_logger",
+ "gravita-example-shim",
  "gravita-math",
  "gravita-renderer",
- "log",
- "pixels",
- "winit",
 ]
 
 [[package]]
@@ -2067,15 +2066,10 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "stickman-walk"
 version = "0.1.0"
 dependencies = [
- "env_logger",
  "gravita-collections",
+ "gravita-example-shim",
  "gravita-math",
  "gravita-renderer",
- "log",
- "pixels",
- "wasm-bindgen",
- "winit",
- "winit_input_helper",
 ]
 
 [[package]]
@@ -2126,7 +2120,6 @@ dependencies = [
  "pixels",
  "rand",
  "winit",
- "winit_input_helper",
 ]
 
 [[package]]
@@ -2879,16 +2872,6 @@ dependencies = [
  "x11-dl",
  "x11rb",
  "xkbcommon-dl",
-]
-
-[[package]]
-name = "winit_input_helper"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3dcabe3fca8a9a6286b9883057feaf3aeed0a159ea27e0611e49458afb7f75"
-dependencies = [
- "web-time",
- "winit",
 ]
 
 [[package]]

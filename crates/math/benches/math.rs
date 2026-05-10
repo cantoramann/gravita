@@ -4,7 +4,7 @@
 //! Run with: `cargo bench -p gravita-math`
 
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
-use gravita_math::{AABB, Circle, PI, Ray2D, Transform2D, Vec2, lerp, smooth_step};
+use gravita_math::{Aabb, Circle, PI, Ray2D, Transform2D, Vec2, lerp, smooth_step};
 
 // ============================================================================
 // Vector Operations
@@ -87,14 +87,14 @@ fn bench_transform_operations(c: &mut Criterion) {
 }
 
 // ============================================================================
-// AABB Operations
+// Aabb Operations
 // ============================================================================
 
 fn bench_aabb_operations(c: &mut Criterion) {
-    let mut group = c.benchmark_group("AABB");
+    let mut group = c.benchmark_group("Aabb");
 
-    let aabb1 = AABB::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
-    let aabb2 = AABB::new(Vec2::new(5.0, 5.0), Vec2::new(15.0, 15.0));
+    let aabb1 = Aabb::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
+    let aabb2 = Aabb::new(Vec2::new(5.0, 5.0), Vec2::new(15.0, 15.0));
     let point = Vec2::new(5.0, 5.0);
 
     group.bench_function("contains_point", |b| {
@@ -142,7 +142,7 @@ fn bench_ray_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Ray2D");
 
     let ray = Ray2D::new(Vec2::new(-20.0, 5.0), Vec2::RIGHT);
-    let aabb = AABB::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
+    let aabb = Aabb::new(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
     let circle = Circle::new(Vec2::new(0.0, 5.0), 5.0);
 
     group.bench_function("cast_aabb", |b| {

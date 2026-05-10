@@ -104,11 +104,11 @@ impl PhysicsWorld {
     /// an object pool pattern instead.
     pub fn disable_body(&mut self, id: usize) {
         if let Some(body) = self.bodies.get_mut(id) {
-            body.body_type = BodyType::Static;
+            body.set_body_type(BodyType::Static);
             body.position = Vec2::new(-10000.0, -10000.0);
             body.velocity = Vec2::ZERO;
             body.angular_velocity = 0.0;
-            body.is_sensor = true; // Won't generate collisions
+            body.is_sensor = true;
         }
     }
 
@@ -132,16 +132,11 @@ impl PhysicsWorld {
             "Time step must be positive and finite, got {dt}"
         );
 
-        // Clear forces from last frame
         for body in &mut self.bodies {
             body.clear_forces();
         }
 
-        // Apply gravity
-        self.apply_gravity();
-
-        // Apply other forces (springs, etc.)
-        self.apply_forces();
+        self.apply_gravity_and_damping();
 
         // Integrate velocities
         for body in &mut self.bodies {
@@ -205,26 +200,17 @@ impl PhysicsWorld {
         self.apply_sleeping();
     }
 
-    fn apply_gravity(&mut self) {
+    /// Single pass over dynamic bodies that applies gravity, linear damping
+    /// (treated as a drag force), and angular damping. Writes directly to the
+    /// accumulators to skip the redundant body-type check `apply_force` does.
+    fn apply_gravity_and_damping(&mut self) {
         for body in &mut self.bodies {
-            if body.body_type == BodyType::Dynamic {
-                let gravity_force = self.gravity * body.mass * body.gravity_scale;
-                body.apply_force(gravity_force);
+            if body.body_type != BodyType::Dynamic {
+                continue;
             }
-        }
-    }
-
-    fn apply_forces(&mut self) {
-        // Apply damping
-        for body in &mut self.bodies {
-            if body.body_type == BodyType::Dynamic {
-                // Linear damping
-                let drag_force = -body.velocity * body.linear_damping;
-                body.apply_force(drag_force);
-
-                // Angular damping
-                body.torque_accumulator -= body.angular_velocity * body.angular_damping;
-            }
+            body.force_accumulator += self.gravity * body.mass * body.gravity_scale;
+            body.force_accumulator += -body.velocity * body.linear_damping;
+            body.torque_accumulator -= body.angular_velocity * body.angular_damping;
         }
     }
 
@@ -421,7 +407,7 @@ impl PhysicsWorld {
 
 #[cfg(test)]
 mod tests {
-    use gravita_math::{AABB, Circle};
+    use gravita_math::{Aabb, Circle};
 
     use super::*;
     use crate::body::CollisionShape;
@@ -431,7 +417,7 @@ mod tests {
     }
 
     fn box_shape(width: f32, height: f32) -> CollisionShape {
-        CollisionShape::AABB(AABB::from_center_size(Vec2::ZERO, Vec2::new(width, height)))
+        CollisionShape::Aabb(Aabb::from_center_size(Vec2::ZERO, Vec2::new(width, height)))
     }
 
     // =========================================================================

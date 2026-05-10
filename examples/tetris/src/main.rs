@@ -11,7 +11,8 @@
 
 use std::time::Instant;
 
-use gravita_math::Vec2;
+use gravita_math::{Vec2, lerp};
+use gravita_renderer::text as renderer_text;
 use pixels::{Pixels, SurfaceTexture};
 use rand::Rng;
 use winit::{
@@ -1629,12 +1630,10 @@ impl TetrisGame {
         }
     }
 
+    // Thin wrappers around `gravita_renderer::text` so the call sites below
+    // don't need to repeat WIDTH/HEIGHT every time.
     fn draw_text(&self, frame: &mut [u8], text: &str, x: i32, y: i32, color: [u8; 4]) {
-        let mut cx = x;
-        for ch in text.chars() {
-            self.draw_char(frame, ch, cx, y, color);
-            cx += 8;
-        }
+        renderer_text::draw_text(frame, text, x, y, color, WIDTH, HEIGHT);
     }
 
     fn draw_text_scaled(
@@ -1646,196 +1645,16 @@ impl TetrisGame {
         color: [u8; 4],
         scale: i32,
     ) {
-        let mut cx = x;
-        for ch in text.chars() {
-            self.draw_char_scaled(frame, ch, cx, y, color, scale);
-            cx += 8 * scale;
-        }
+        renderer_text::draw_text_scaled(frame, text, x, y, color, scale, WIDTH, HEIGHT);
     }
 
     fn draw_text_centered(&self, frame: &mut [u8], text: &str, cx: i32, y: i32, color: [u8; 4]) {
-        let width = text.len() as i32 * 8;
-        self.draw_text(frame, text, cx - width / 2, y, color);
-    }
-
-    fn draw_char(&self, frame: &mut [u8], ch: char, x: i32, y: i32, color: [u8; 4]) {
-        let bitmap = get_char_bitmap(ch);
-        for (row, &bits) in bitmap.iter().enumerate() {
-            for col in 0..5 {
-                if (bits >> (4 - col)) & 1 == 1 {
-                    let px = x + col;
-                    let py = y + row as i32;
-                    if px >= 0 && px < WIDTH as i32 && py >= 0 && py < HEIGHT as i32 {
-                        let idx = ((py as u32 * WIDTH + px as u32) * 4) as usize;
-                        if idx + 3 < frame.len() {
-                            frame[idx..idx + 4].copy_from_slice(&color);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn draw_char_scaled(
-        &self,
-        frame: &mut [u8],
-        ch: char,
-        x: i32,
-        y: i32,
-        color: [u8; 4],
-        scale: i32,
-    ) {
-        let bitmap = get_char_bitmap(ch);
-        for (row, &bits) in bitmap.iter().enumerate() {
-            for col in 0..5 {
-                if (bits >> (4 - col)) & 1 == 1 {
-                    for sy in 0..scale {
-                        for sx in 0..scale {
-                            let px = x + col * scale + sx;
-                            let py = y + row as i32 * scale + sy;
-                            if px >= 0 && px < WIDTH as i32 && py >= 0 && py < HEIGHT as i32 {
-                                let idx = ((py as u32 * WIDTH + px as u32) * 4) as usize;
-                                if idx + 3 < frame.len() {
-                                    frame[idx..idx + 4].copy_from_slice(&color);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        renderer_text::draw_text_centered(frame, text, cx, y, color, WIDTH, HEIGHT);
     }
 }
 
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
-
-// Simple 5x7 bitmap font
-fn get_char_bitmap(ch: char) -> [u8; 7] {
-    match ch.to_ascii_uppercase() {
-        'A' => [
-            0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001,
-        ],
-        'B' => [
-            0b11110, 0b10001, 0b11110, 0b10001, 0b10001, 0b10001, 0b11110,
-        ],
-        'C' => [
-            0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110,
-        ],
-        'D' => [
-            0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110,
-        ],
-        'E' => [
-            0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111,
-        ],
-        'F' => [
-            0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000,
-        ],
-        'G' => [
-            0b01110, 0b10001, 0b10000, 0b10111, 0b10001, 0b10001, 0b01110,
-        ],
-        'H' => [
-            0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001,
-        ],
-        'I' => [
-            0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
-        ],
-        'J' => [
-            0b00111, 0b00010, 0b00010, 0b00010, 0b00010, 0b10010, 0b01100,
-        ],
-        'K' => [
-            0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001,
-        ],
-        'L' => [
-            0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111,
-        ],
-        'M' => [
-            0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001,
-        ],
-        'N' => [
-            0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001,
-        ],
-        'O' => [
-            0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110,
-        ],
-        'P' => [
-            0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000,
-        ],
-        'Q' => [
-            0b01110, 0b10001, 0b10001, 0b10001, 0b10101, 0b10010, 0b01101,
-        ],
-        'R' => [
-            0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001,
-        ],
-        'S' => [
-            0b01110, 0b10001, 0b10000, 0b01110, 0b00001, 0b10001, 0b01110,
-        ],
-        'T' => [
-            0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100,
-        ],
-        'U' => [
-            0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110,
-        ],
-        'V' => [
-            0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100,
-        ],
-        'W' => [
-            0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b11011, 0b10001,
-        ],
-        'X' => [
-            0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001,
-        ],
-        'Y' => [
-            0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100,
-        ],
-        'Z' => [
-            0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111,
-        ],
-        '0' => [
-            0b01110, 0b10011, 0b10101, 0b10101, 0b11001, 0b10001, 0b01110,
-        ],
-        '1' => [
-            0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
-        ],
-        '2' => [
-            0b01110, 0b10001, 0b00001, 0b00110, 0b01000, 0b10000, 0b11111,
-        ],
-        '3' => [
-            0b01110, 0b10001, 0b00001, 0b00110, 0b00001, 0b10001, 0b01110,
-        ],
-        '4' => [
-            0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010,
-        ],
-        '5' => [
-            0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110,
-        ],
-        '6' => [
-            0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110,
-        ],
-        '7' => [
-            0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000,
-        ],
-        '8' => [
-            0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110,
-        ],
-        '9' => [
-            0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100,
-        ],
-        ':' => [
-            0b00000, 0b00100, 0b00000, 0b00000, 0b00100, 0b00000, 0b00000,
-        ],
-        '!' => [
-            0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00000, 0b00100,
-        ],
-        ' ' => [
-            0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000,
-        ],
-        _ => [
-            0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000,
-        ],
-    }
-}
+// Local `lerp` and 5x7 bitmap font moved into `gravita_math::lerp` and
+// `gravita_renderer::text` respectively.
 
 // ============================================================================
 // APPLICATION HANDLER

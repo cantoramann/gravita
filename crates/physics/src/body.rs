@@ -1,5 +1,5 @@
 // physics/src/body.rs
-use gravita_math::{AABB, Circle, Vec2};
+use gravita_math::{Aabb, Circle, Vec2};
 
 /// High-level classification of how a body participates in the simulation.
 ///
@@ -22,7 +22,7 @@ pub enum CollisionShape {
     /// Circular shape, usually cheap to test and simulate.
     Circle(Circle),
     /// Axis-aligned box shape.
-    AABB(AABB),
+    Aabb(Aabb),
 }
 
 impl CollisionShape {
@@ -30,11 +30,11 @@ impl CollisionShape {
     ///
     /// Returns `false` for:
     /// - Circles with zero or negative radius
-    /// - AABBs where min >= max on either axis
+    /// - Aabbs where min >= max on either axis
     pub fn is_valid(&self) -> bool {
         match self {
             Self::Circle(c) => c.radius > 0.0 && c.radius.is_finite(),
-            Self::AABB(aabb) => {
+            Self::Aabb(aabb) => {
                 aabb.min.x < aabb.max.x
                     && aabb.min.y < aabb.max.y
                     && aabb.min.x.is_finite()
@@ -46,10 +46,10 @@ impl CollisionShape {
     }
 
     /// Compute an axis-aligned bounding box that encloses this shape.
-    pub fn get_aabb(&self) -> AABB {
+    pub fn get_aabb(&self) -> Aabb {
         match self {
             Self::Circle(c) => c.to_aabb(),
-            Self::AABB(aabb) => *aabb,
+            Self::Aabb(aabb) => *aabb,
         }
     }
 
@@ -60,7 +60,7 @@ impl CollisionShape {
                 // Mass = density * area
                 density * std::f32::consts::PI * c.radius * c.radius
             },
-            Self::AABB(aabb) => {
+            Self::Aabb(aabb) => {
                 let size = aabb.size();
                 density * size.x * size.y
             },
@@ -74,7 +74,7 @@ impl CollisionShape {
                 // I = 0.5 * m * r²
                 0.5 * mass * c.radius * c.radius
             },
-            Self::AABB(aabb) => {
+            Self::Aabb(aabb) => {
                 // I = m * (w² + h²) / 12
                 let size = aabb.size();
                 mass * size.x.mul_add(size.x, size.y * size.y) / 12.0
@@ -86,13 +86,24 @@ impl CollisionShape {
 /// Rigid body with position, velocity and collision shape.
 ///
 /// This is the main simulation object used by [`crate::world::PhysicsWorld`].
+///
+/// # Field visibility
+///
+/// User-mutable state (position, velocity, material coefficients) is `pub`.
+/// Solver-managed state (`inv_mass`, `force_accumulator`, etc.) and fields
+/// with invariants (`mass`, `body_type`, `fixed_rotation`) are `pub(crate)`.
+/// Use the typed getters/setters for those (e.g. [`set_mass`](Self::set_mass)
+/// or [`set_body_type`](Self::set_body_type)) — direct assignment would
+/// otherwise leave derived fields like `inv_mass` stale.
 #[derive(Debug, Clone)]
 pub struct RigidBody {
     // Identity
     /// Unique identifier within the physics world.
     pub id: usize,
-    /// How this body participates in the simulation.
-    pub body_type: BodyType,
+    /// How this body participates in the simulation. Use
+    /// [`set_body_type`](Self::set_body_type) to change it after construction —
+    /// direct assignment would skip the inverse-mass recomputation.
+    pub(crate) body_type: BodyType,
 
     // Transform
     /// World-space position of the body's center of mass.
@@ -104,27 +115,23 @@ pub struct RigidBody {
     /// Current linear velocity (units per second).
     pub velocity: Vec2,
     /// Current linear acceleration (computed from forces).
-    pub acceleration: Vec2,
+    pub(crate) acceleration: Vec2,
     /// Accumulated forces to be applied this step.
-    pub force_accumulator: Vec2,
+    pub(crate) force_accumulator: Vec2,
 
     // Angular dynamics
     /// Current angular velocity (radians per second).
     pub angular_velocity: f32,
     /// Current angular acceleration (computed from torque).
-    pub angular_acceleration: f32,
+    pub(crate) angular_acceleration: f32,
     /// Accumulated torque to be applied this step.
-    pub torque_accumulator: f32,
+    pub(crate) torque_accumulator: f32,
 
-    // Mass properties
-    /// Mass of the body in arbitrary units.
-    pub mass: f32,
-    /// Inverse mass (1/mass), zero for infinite mass.
-    pub inv_mass: f32,
-    /// Moment of inertia (resistance to rotation).
-    pub inertia: f32,
-    /// Inverse inertia (1/inertia), zero for fixed rotation.
-    pub inv_inertia: f32,
+    // Mass properties — set via setters so `inv_mass`/`inv_inertia` stay in sync.
+    pub(crate) mass: f32,
+    pub(crate) inv_mass: f32,
+    pub(crate) inertia: f32,
+    pub(crate) inv_inertia: f32,
 
     // Material properties
     /// Coefficient of restitution (bounciness), range [0, 1].
@@ -145,8 +152,10 @@ pub struct RigidBody {
     // Constraints
     /// If true, detects collisions but doesn't respond physically.
     pub is_sensor: bool,
-    /// If true, prevents rotation from physics forces.
-    pub fixed_rotation: bool,
+    /// If true, prevents rotation from physics forces. Use
+    /// [`set_fixed_rotation`](Self::set_fixed_rotation) to flip it after
+    /// construction.
+    pub(crate) fixed_rotation: bool,
 }
 
 impl RigidBody {
@@ -159,7 +168,7 @@ impl RigidBody {
     ///
     /// Debug assertions will panic if:
     /// - Circle radius is zero or negative
-    /// - AABB has min >= max on either axis
+    /// - Aabb has min >= max on either axis
     pub fn new(id: usize, shape: CollisionShape) -> Self {
         debug_assert!(shape.is_valid(), "Invalid collision shape: {shape:?}");
 
@@ -193,6 +202,7 @@ impl RigidBody {
     }
 
     /// Builder-style setter for [`BodyType`].
+    #[must_use]
     pub fn with_type(mut self, body_type: BodyType) -> Self {
         self.body_type = body_type;
         self.update_mass_properties();
@@ -201,11 +211,14 @@ impl RigidBody {
 
     /// Builder-style setter for mass based on `density`.
     ///
-    /// This automatically recomputes inertia for the current shape.
+    /// This automatically recomputes inertia for the current shape. Mutually
+    /// exclusive with [`with_mass`](Self::with_mass) — whichever is called
+    /// later wins.
     ///
     /// # Panics (debug builds only)
     ///
     /// Debug assertion fails if density is not positive and finite.
+    #[must_use]
     pub fn with_density(mut self, density: f32) -> Self {
         debug_assert!(
             density > 0.0 && density.is_finite(),
@@ -217,16 +230,217 @@ impl RigidBody {
         self
     }
 
+    /// Builder-style setter for mass directly (recomputes inertia from shape).
+    ///
+    /// Mutually exclusive with [`with_density`](Self::with_density) — whichever
+    /// is called later wins.
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Debug assertion fails if mass is not positive and finite.
+    #[must_use]
+    pub fn with_mass(mut self, mass: f32) -> Self {
+        debug_assert!(
+            mass > 0.0 && mass.is_finite(),
+            "Mass must be positive and finite, got {mass}"
+        );
+        self.mass = mass;
+        self.inertia = self.shape.get_inertia(mass);
+        self.update_mass_properties();
+        self
+    }
+
     /// Builder-style setter for initial world position.
+    #[must_use]
     pub fn with_position(mut self, position: Vec2) -> Self {
         self.position = position;
         self
     }
 
+    /// Builder-style setter for initial rotation (radians).
+    #[must_use]
+    pub fn with_rotation(mut self, rotation: f32) -> Self {
+        self.rotation = rotation;
+        self
+    }
+
     /// Builder-style setter for initial linear velocity.
+    #[must_use]
     pub fn with_velocity(mut self, velocity: Vec2) -> Self {
         self.velocity = velocity;
         self
+    }
+
+    /// Builder-style setter for initial angular velocity (radians/second).
+    #[must_use]
+    pub fn with_angular_velocity(mut self, angular_velocity: f32) -> Self {
+        self.angular_velocity = angular_velocity;
+        self
+    }
+
+    /// Builder-style setter for coefficient of restitution (bounciness), `[0, 1]`.
+    #[must_use]
+    pub fn with_restitution(mut self, restitution: f32) -> Self {
+        self.restitution = restitution;
+        self
+    }
+
+    /// Builder-style setter for friction coefficient.
+    #[must_use]
+    pub fn with_friction(mut self, friction: f32) -> Self {
+        self.friction = friction;
+        self
+    }
+
+    /// Builder-style setter for linear damping (per-step velocity drag).
+    #[must_use]
+    pub fn with_linear_damping(mut self, damping: f32) -> Self {
+        self.linear_damping = damping;
+        self
+    }
+
+    /// Builder-style setter for angular damping (per-step angular drag).
+    #[must_use]
+    pub fn with_angular_damping(mut self, damping: f32) -> Self {
+        self.angular_damping = damping;
+        self
+    }
+
+    /// Builder-style setter for gravity scale (multiplier of world gravity).
+    #[must_use]
+    pub fn with_gravity_scale(mut self, scale: f32) -> Self {
+        self.gravity_scale = scale;
+        self
+    }
+
+    /// Builder-style setter for sensor mode (detects collisions but doesn't respond).
+    #[must_use]
+    pub fn with_sensor(mut self, is_sensor: bool) -> Self {
+        self.is_sensor = is_sensor;
+        self
+    }
+
+    /// Builder-style setter for fixed rotation (zeros inverse inertia).
+    #[must_use]
+    pub fn with_fixed_rotation(mut self, fixed: bool) -> Self {
+        self.fixed_rotation = fixed;
+        self.update_mass_properties();
+        self
+    }
+
+    // =========================================================================
+    // Accessors for solver-managed and invariant-protected fields
+    // =========================================================================
+
+    /// Body type (Static / Kinematic / Dynamic).
+    #[inline]
+    #[must_use]
+    pub fn body_type(&self) -> BodyType {
+        self.body_type
+    }
+
+    /// Mass in arbitrary units.
+    #[inline]
+    #[must_use]
+    pub fn mass(&self) -> f32 {
+        self.mass
+    }
+
+    /// Inverse mass (`1/mass`, or `0` for Static/Kinematic bodies).
+    #[inline]
+    #[must_use]
+    pub fn inv_mass(&self) -> f32 {
+        self.inv_mass
+    }
+
+    /// Moment of inertia.
+    #[inline]
+    #[must_use]
+    pub fn inertia(&self) -> f32 {
+        self.inertia
+    }
+
+    /// Inverse inertia (`0` for Static/Kinematic/fixed-rotation bodies).
+    #[inline]
+    #[must_use]
+    pub fn inv_inertia(&self) -> f32 {
+        self.inv_inertia
+    }
+
+    /// Whether rotation is locked.
+    #[inline]
+    #[must_use]
+    pub fn fixed_rotation(&self) -> bool {
+        self.fixed_rotation
+    }
+
+    /// Currently accumulated linear force for this step.
+    #[inline]
+    #[must_use]
+    pub fn force_accumulator(&self) -> Vec2 {
+        self.force_accumulator
+    }
+
+    /// Currently accumulated angular torque for this step.
+    #[inline]
+    #[must_use]
+    pub fn torque_accumulator(&self) -> f32 {
+        self.torque_accumulator
+    }
+
+    /// Linear acceleration computed by the last integrator velocity step.
+    #[inline]
+    #[must_use]
+    pub fn acceleration(&self) -> Vec2 {
+        self.acceleration
+    }
+
+    /// Angular acceleration computed by the last integrator velocity step.
+    #[inline]
+    #[must_use]
+    pub fn angular_acceleration(&self) -> f32 {
+        self.angular_acceleration
+    }
+
+    /// Change body type, recomputing inverse mass/inertia for solver use.
+    pub fn set_body_type(&mut self, body_type: BodyType) {
+        self.body_type = body_type;
+        self.update_mass_properties();
+    }
+
+    /// Set mass directly, refreshing inverse mass and shape-derived inertia.
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Debug assertion fails if mass is not positive and finite.
+    pub fn set_mass(&mut self, mass: f32) {
+        debug_assert!(
+            mass > 0.0 && mass.is_finite(),
+            "Mass must be positive and finite, got {mass}"
+        );
+        self.mass = mass;
+        self.inertia = self.shape.get_inertia(mass);
+        self.update_mass_properties();
+    }
+
+    /// Set moment of inertia directly (bypasses shape-derived recompute).
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Debug assertion fails if inertia is not positive and finite.
+    pub fn set_inertia(&mut self, inertia: f32) {
+        debug_assert!(
+            inertia > 0.0 && inertia.is_finite(),
+            "Inertia must be positive and finite, got {inertia}"
+        );
+        self.inertia = inertia;
+        self.update_mass_properties();
+    }
+
+    /// Lock or unlock rotation, refreshing inverse inertia.
+    pub fn set_fixed_rotation(&mut self, fixed: bool) {
+        self.fixed_rotation = fixed;
+        self.update_mass_properties();
     }
 
     /// Recalculate inverse mass and inertia based on current values.
@@ -291,10 +505,10 @@ impl RigidBody {
     /// Get this body's shape as a world-space axis-aligned bounding box.
     ///
     /// This is used by the broad-phase and for simple overlap queries.
-    pub fn get_world_aabb(&self) -> AABB {
+    pub fn get_world_aabb(&self) -> Aabb {
         match &self.shape {
             CollisionShape::Circle(c) => Circle::new(self.position + c.center, c.radius).to_aabb(),
-            CollisionShape::AABB(aabb) => aabb.translate(self.position),
+            CollisionShape::Aabb(aabb) => aabb.translate(self.position),
         }
     }
 
@@ -337,7 +551,7 @@ mod tests {
     }
 
     fn box_shape(width: f32, height: f32) -> CollisionShape {
-        CollisionShape::AABB(AABB::from_center_size(Vec2::ZERO, Vec2::new(width, height)))
+        CollisionShape::Aabb(Aabb::from_center_size(Vec2::ZERO, Vec2::new(width, height)))
     }
 
     // =========================================================================
@@ -400,7 +614,7 @@ mod tests {
     #[test]
     fn new_body_is_dynamic() {
         let body = RigidBody::new(0, circle_shape(10.0));
-        assert_eq!(body.body_type, BodyType::Dynamic);
+        assert_eq!(body.body_type(), BodyType::Dynamic);
     }
 
     #[test]
@@ -412,8 +626,8 @@ mod tests {
     #[test]
     fn new_body_has_unit_mass() {
         let body = RigidBody::new(0, circle_shape(10.0));
-        assert_eq!(body.mass, 1.0);
-        assert_eq!(body.inv_mass, 1.0);
+        assert_eq!(body.mass(), 1.0);
+        assert_eq!(body.inv_mass(), 1.0);
     }
 
     #[test]
@@ -442,23 +656,54 @@ mod tests {
     #[test]
     fn with_type_static_zeroes_inverse_mass() {
         let body = RigidBody::new(0, circle_shape(10.0)).with_type(BodyType::Static);
-        assert_eq!(body.inv_mass, 0.0);
-        assert_eq!(body.inv_inertia, 0.0);
+        assert_eq!(body.inv_mass(), 0.0);
+        assert_eq!(body.inv_inertia(), 0.0);
     }
 
     #[test]
     fn with_type_kinematic_zeroes_inverse_mass() {
         let body = RigidBody::new(0, circle_shape(10.0)).with_type(BodyType::Kinematic);
-        assert_eq!(body.inv_mass, 0.0);
-        assert_eq!(body.inv_inertia, 0.0);
+        assert_eq!(body.inv_mass(), 0.0);
+        assert_eq!(body.inv_inertia(), 0.0);
     }
 
     #[test]
     fn with_density_updates_mass_and_inertia() {
         let body = RigidBody::new(0, box_shape(10.0, 10.0)).with_density(2.0);
         // Area = 100, density = 2, mass = 200
-        assert_eq!(body.mass, 200.0);
-        assert!(body.inv_mass > 0.0);
+        assert_eq!(body.mass(), 200.0);
+        assert!(body.inv_mass() > 0.0);
+    }
+
+    #[test]
+    fn set_mass_keeps_inverse_mass_in_sync() {
+        // Regression test for Q1: direct `mass = X` used to leave `inv_mass` stale.
+        let mut body = RigidBody::new(0, circle_shape(10.0));
+        body.set_mass(5.0);
+        assert_eq!(body.mass(), 5.0);
+        assert!(
+            (body.inv_mass() - 0.2).abs() < EPSILON,
+            "inv_mass should track mass: got {}",
+            body.inv_mass()
+        );
+    }
+
+    #[test]
+    fn set_body_type_static_zeroes_inverse_mass() {
+        let mut body = RigidBody::new(0, circle_shape(10.0));
+        body.set_body_type(BodyType::Static);
+        assert_eq!(body.inv_mass(), 0.0);
+        assert_eq!(body.inv_inertia(), 0.0);
+    }
+
+    #[test]
+    fn set_fixed_rotation_zeroes_inverse_inertia() {
+        let mut body = RigidBody::new(0, circle_shape(10.0));
+        assert!(body.inv_inertia() > 0.0);
+        body.set_fixed_rotation(true);
+        assert_eq!(body.inv_inertia(), 0.0);
+        body.set_fixed_rotation(false);
+        assert!(body.inv_inertia() > 0.0);
     }
 
     // =========================================================================
@@ -528,7 +773,7 @@ mod tests {
     }
 
     // =========================================================================
-    // World AABB
+    // World Aabb
     // =========================================================================
 
     #[test]

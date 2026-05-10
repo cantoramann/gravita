@@ -51,7 +51,7 @@ impl Vec2 {
     #[inline]
     /// Euclidean length (magnitude) of the vector.
     pub fn length(&self) -> f32 {
-        self.x.hypot(self.y)
+        self.length_squared().sqrt()
     }
 
     #[inline]

@@ -12,6 +12,9 @@ members = [
     "crates/input",
     "crates/assets",
 
+    # Internal (publish = false)
+    "crates/example-shim",
+
     # Examples (not published)
     "examples/bouncing-balls",
     "examples/rotating-rod",
@@ -51,6 +54,7 @@ gravita-collections = { version = "0.1.0", path = "crates/collections" }
 gravita-engine-core = { version = "0.1.0", path = "crates/engine-core" }
 gravita-input = { version = "0.1.0", path = "crates/input" }
 gravita-assets = { version = "0.1.0", path = "crates/assets" }
+gravita-example-shim = { path = "crates/example-shim" }
 
 approx = "0.5"              # For floating point comparisons in tests
 criterion = "0.5"           # Benchmarking framework
@@ -59,7 +63,6 @@ log = "0.4"
 pixels = "0.15"
 rand = "0.8"                # Random number generation
 winit = "0.30.12"           # Window management
-winit_input_helper = "0.17"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Workspace-wide lint configuration
@@ -88,6 +91,7 @@ cognitive_complexity = "warn"
 perf = { level = "warn", priority = -1 }
 
 # ─── Style (pedantic subset) ───────────────────────────────────────────────────
+upper_case_acronyms = "warn"
 cloned_instead_of_copied = "warn"
 flat_map_option = "warn"
 fn_params_excessive_bools = "warn"

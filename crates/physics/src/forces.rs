@@ -17,6 +17,17 @@ pub trait ForceGenerator: Send + Sync {
     fn apply(&mut self, bodies: &mut [RigidBody], dt: f32);
 }
 
+/// Apply `f` to every dynamic body in the slice. Shared helper for force
+/// generators that only affect dynamic bodies (the common case).
+#[inline]
+fn apply_to_dynamic<F: FnMut(&mut RigidBody)>(bodies: &mut [RigidBody], mut f: F) {
+    for body in bodies {
+        if body.body_type == BodyType::Dynamic {
+            f(body);
+        }
+    }
+}
+
 /// Registry for managing global and per-body force generators.
 #[derive(Default)]
 pub struct ForceRegistry {
@@ -44,22 +55,15 @@ impl ForceRegistry {
     ///
     /// This is typically called once per frame by the world.
     pub fn apply_all(&mut self, bodies: &mut [RigidBody], dt: f32) {
-        // Apply global forces
         for generator in &mut self.generators {
             generator.apply(bodies, dt);
         }
 
-        // Apply body-specific forces
         for (body_id, generators) in &mut self.body_forces {
-            if let Some(body) = bodies.get_mut(*body_id) {
-                // Create a temporary single-body slice
-                let mut temp_bodies = vec![body.clone()];
+            if *body_id < bodies.len() {
+                let slice = std::slice::from_mut(&mut bodies[*body_id]);
                 for generator in generators {
-                    generator.apply(&mut temp_bodies, dt);
-                }
-                // Copy back the changes
-                if let Some(original_body) = bodies.get_mut(*body_id) {
-                    *original_body = temp_bodies[0].clone();
+                    generator.apply(slice, dt);
                 }
             }
         }
@@ -106,12 +110,10 @@ impl Gravity {
 
 impl ForceGenerator for Gravity {
     fn apply(&mut self, bodies: &mut [RigidBody], _dt: f32) {
-        for body in bodies {
-            if body.body_type == BodyType::Dynamic {
-                let force = self.acceleration * body.mass * body.gravity_scale;
-                body.apply_force(force);
-            }
-        }
+        apply_to_dynamic(bodies, |body| {
+            let force = self.acceleration * body.mass * body.gravity_scale;
+            body.apply_force(force);
+        });
     }
 }
 
@@ -130,12 +132,9 @@ impl LinearDrag {
 
 impl ForceGenerator for LinearDrag {
     fn apply(&mut self, bodies: &mut [RigidBody], _dt: f32) {
-        for body in bodies {
-            if body.body_type == BodyType::Dynamic {
-                let drag_force = -body.velocity * self.coefficient;
-                body.apply_force(drag_force);
-            }
-        }
+        apply_to_dynamic(bodies, |body| {
+            body.apply_force(-body.velocity * self.coefficient);
+        });
     }
 }
 
@@ -172,17 +171,15 @@ impl QuadraticDrag {
 
 impl ForceGenerator for QuadraticDrag {
     fn apply(&mut self, bodies: &mut [RigidBody], _dt: f32) {
-        for body in bodies {
-            if body.body_type == BodyType::Dynamic {
-                let speed = body.velocity.length();
-                if speed > 0.0001 {
-                    let drag_magnitude =
-                        0.5 * self.density * speed * speed * self.drag_coefficient * self.area;
-                    let drag_force = -body.velocity.normalize() * drag_magnitude;
-                    body.apply_force(drag_force);
-                }
+        apply_to_dynamic(bodies, |body| {
+            let speed_sq = body.velocity.length_squared();
+            if speed_sq > 1e-8 {
+                let speed = speed_sq.sqrt();
+                let drag_magnitude =
+                    0.5 * self.density * speed_sq * self.drag_coefficient * self.area;
+                body.apply_force(-(body.velocity / speed) * drag_magnitude);
             }
-        }
+        });
     }
 }
 
@@ -441,18 +438,16 @@ impl RadialForce {
 
 impl ForceGenerator for RadialForce {
     fn apply(&mut self, bodies: &mut [RigidBody], _dt: f32) {
-        for body in bodies {
-            if body.body_type != BodyType::Dynamic {
-                continue;
-            }
-
+        let radius_sq = self.radius * self.radius;
+        apply_to_dynamic(bodies, |body| {
             let delta = body.position - self.center;
-            let distance = delta.length();
-
-            if distance > self.radius || distance < 0.0001 {
-                continue;
+            let dist_sq = delta.length_squared();
+            // Squared-space early out lets ~95% of out-of-range bodies skip the sqrt.
+            if dist_sq > radius_sq || dist_sq < 1e-8 {
+                return;
             }
 
+            let distance = dist_sq.sqrt();
             let direction = delta / distance;
 
             let magnitude = match self.falloff {
@@ -471,7 +466,7 @@ impl ForceGenerator for RadialForce {
             } else {
                 body.apply_force(force);
             }
-        }
+        });
     }
 }
 
@@ -482,7 +477,7 @@ pub struct DirectionalForce {
     /// Magnitude of the force.
     pub strength: f32,
     /// Optional bounds - force only applies within this area.
-    pub bounds: Option<gravita_math::AABB>,
+    pub bounds: Option<gravita_math::Aabb>,
     /// Random variation in force direction (0 = none, 1 = ±100%).
     pub turbulence: f32,
 }
@@ -499,7 +494,7 @@ impl DirectionalForce {
     }
 
     /// Set the bounds of the force field.
-    pub fn with_bounds(mut self, bounds: gravita_math::AABB) -> Self {
+    pub fn with_bounds(mut self, bounds: gravita_math::Aabb) -> Self {
         self.bounds = Some(bounds);
         self
     }
@@ -507,22 +502,15 @@ impl DirectionalForce {
 
 impl ForceGenerator for DirectionalForce {
     fn apply(&mut self, bodies: &mut [RigidBody], _dt: f32) {
-        for body in bodies {
-            if body.body_type != BodyType::Dynamic {
-                continue;
-            }
-
-            // Check if body is within bounds
+        apply_to_dynamic(bodies, |body| {
             if let Some(bounds) = self.bounds
                 && !bounds.contains_point(body.position)
             {
-                continue;
+                return;
             }
 
-            // Apply base force
             let mut force = self.direction * self.strength;
 
-            // Add turbulence (simple random variation)
             if self.turbulence > 0.0 {
                 let noise_x = (body.position.x * 0.1).sin() * self.turbulence;
                 let noise_y = (body.position.y * 0.1).cos() * self.turbulence;
@@ -530,7 +518,7 @@ impl ForceGenerator for DirectionalForce {
             }
 
             body.apply_force(force);
-        }
+        });
     }
 }
 
@@ -566,43 +554,33 @@ impl Buoyancy {
 
 impl ForceGenerator for Buoyancy {
     fn apply(&mut self, bodies: &mut [RigidBody], _dt: f32) {
-        for body in bodies {
-            if body.body_type != BodyType::Dynamic {
-                continue;
-            }
-
+        apply_to_dynamic(bodies, |body| {
             let aabb = body.get_world_aabb();
-
-            // Check if body is at least partially submerged
             if aabb.min.y > self.water_level {
-                continue; // Above water
+                return;
             }
 
-            // Calculate submerged volume (simplified for 2D)
             let submerged_height = (self.water_level - aabb.min.y).min(aabb.size().y);
             let submerged_ratio = submerged_height / aabb.size().y;
             let submerged_area = aabb.size().x * submerged_height;
 
-            // Buoyancy force (Archimedes' principle)
             let buoyancy = Vec2::new(0.0, self.liquid_density * submerged_area * 9.81);
             body.apply_force(buoyancy);
 
-            // Drag in fluid
             let relative_velocity = body.velocity - self.flow_velocity;
-            let speed = relative_velocity.length();
-
-            if speed > 0.0001 {
+            let speed_sq = relative_velocity.length_squared();
+            if speed_sq > 1e-8 {
+                let speed = speed_sq.sqrt();
                 let drag_magnitude = 0.5
                     * self.liquid_density
-                    * speed
-                    * speed
+                    * speed_sq
                     * self.drag_coefficient
                     * submerged_area
                     * submerged_ratio;
-                let drag = -relative_velocity.normalize() * drag_magnitude;
+                let drag = -(relative_velocity / speed) * drag_magnitude;
                 body.apply_force(drag);
             }
-        }
+        });
     }
 }
 
@@ -661,30 +639,25 @@ impl ForceGenerator for FieldForce {
             if body.body_type != BodyType::Dynamic {
                 continue;
             }
-
             if !check_all && !self.affected_bodies.contains(&idx) {
                 continue;
             }
 
             let mut total_force = Vec2::ZERO;
-
             for (source_pos, strength) in &self.sources {
                 let delta = *source_pos - body.position;
-                let distance = delta.length();
-
-                if distance < 0.001 {
+                let dist_sq = delta.length_squared();
+                if dist_sq < 1e-6 {
                     continue;
                 }
 
+                let distance = dist_sq.sqrt();
                 let direction = delta / distance;
 
                 let magnitude = match self.force_type {
-                    FieldType::Attractive => strength / (distance * distance),
-                    FieldType::Repulsive => -strength / (distance * distance),
-                    FieldType::Dipole => {
-                        // Alternates between attractive and repulsive
-                        strength * (distance * 0.5).cos() / (distance * distance)
-                    },
+                    FieldType::Attractive => strength / dist_sq,
+                    FieldType::Repulsive => -strength / dist_sq,
+                    FieldType::Dipole => strength * (distance * 0.5).cos() / dist_sq,
                 };
 
                 total_force += direction * magnitude * body.mass;
@@ -692,5 +665,215 @@ impl ForceGenerator for FieldForce {
 
             body.apply_force(total_force);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gravita_math::Circle;
+
+    use super::*;
+    use crate::body::CollisionShape;
+
+    fn dynamic_body(id: usize, position: Vec2, mass: f32) -> RigidBody {
+        let shape = CollisionShape::Circle(Circle::new(Vec2::ZERO, 1.0));
+        let mut b = RigidBody::new(id, shape).with_position(position);
+        b.mass = mass;
+        b.inv_mass = 1.0 / mass;
+        b
+    }
+
+    fn static_body(id: usize, position: Vec2) -> RigidBody {
+        let shape = CollisionShape::Circle(Circle::new(Vec2::ZERO, 1.0));
+        RigidBody::new(id, shape)
+            .with_position(position)
+            .with_type(BodyType::Static)
+    }
+
+    // =========================================================================
+    // apply_to_dynamic helper
+    // =========================================================================
+
+    #[test]
+    fn apply_to_dynamic_skips_static_and_kinematic() {
+        let mut bodies = vec![
+            dynamic_body(0, Vec2::ZERO, 1.0),
+            static_body(1, Vec2::ZERO),
+            {
+                let mut k = dynamic_body(2, Vec2::ZERO, 1.0);
+                k.body_type = BodyType::Kinematic;
+                k
+            },
+            dynamic_body(3, Vec2::ZERO, 1.0),
+        ];
+        let mut called = 0;
+        apply_to_dynamic(&mut bodies, |_b| called += 1);
+        assert_eq!(called, 2);
+    }
+
+    // =========================================================================
+    // Gravity
+    // =========================================================================
+
+    #[test]
+    fn gravity_applies_force_proportional_to_mass() {
+        let mut g = Gravity::new(Vec2::new(0.0, -10.0));
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 5.0)];
+        g.apply(&mut bodies, 0.016);
+        // F = m*g = 5 * (0, -10) = (0, -50)
+        assert_eq!(bodies[0].force_accumulator, Vec2::new(0.0, -50.0));
+    }
+
+    #[test]
+    fn gravity_respects_gravity_scale() {
+        let mut g = Gravity::new(Vec2::new(0.0, -10.0));
+        let mut body = dynamic_body(0, Vec2::ZERO, 1.0);
+        body.gravity_scale = 2.0;
+        let mut bodies = vec![body];
+        g.apply(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::new(0.0, -20.0));
+    }
+
+    #[test]
+    fn gravity_skips_static_bodies() {
+        let mut g = Gravity::new(Vec2::new(0.0, -10.0));
+        let mut bodies = vec![static_body(0, Vec2::ZERO)];
+        g.apply(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::ZERO);
+    }
+
+    #[test]
+    fn gravity_presets_have_expected_acceleration() {
+        assert_eq!(Gravity::earth().acceleration.y, -9.81);
+        assert_eq!(Gravity::moon().acceleration.y, -1.62);
+        assert_eq!(Gravity::mars().acceleration.y, -3.71);
+    }
+
+    // =========================================================================
+    // LinearDrag
+    // =========================================================================
+
+    #[test]
+    fn linear_drag_opposes_velocity() {
+        let mut drag = LinearDrag::new(0.5);
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        bodies[0].velocity = Vec2::new(10.0, -4.0);
+        drag.apply(&mut bodies, 0.016);
+        // F = -coefficient * v = -0.5 * (10, -4) = (-5, 2)
+        assert_eq!(bodies[0].force_accumulator, Vec2::new(-5.0, 2.0));
+    }
+
+    #[test]
+    fn linear_drag_zero_velocity_no_force() {
+        let mut drag = LinearDrag::new(1.0);
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        drag.apply(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::ZERO);
+    }
+
+    // =========================================================================
+    // QuadraticDrag (uses length_squared early-out)
+    // =========================================================================
+
+    #[test]
+    fn quadratic_drag_opposes_velocity() {
+        let mut drag = QuadraticDrag::new(1.0, 1.0, 1.0);
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        bodies[0].velocity = Vec2::new(10.0, 0.0);
+        drag.apply(&mut bodies, 0.016);
+        // F_magnitude = 0.5 * density * speed² * Cd * area = 0.5 * 1 * 100 * 1 * 1 = 50
+        // F direction is -velocity / speed = (-1, 0)
+        assert_eq!(bodies[0].force_accumulator, Vec2::new(-50.0, 0.0));
+    }
+
+    #[test]
+    fn quadratic_drag_skips_resting_body_squared_threshold() {
+        // Verify the length_squared early-out: speed below 1e-4 (=> speed_sq < 1e-8) skips.
+        let mut drag = QuadraticDrag::new(1.0, 1.0, 1.0);
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        bodies[0].velocity = Vec2::new(1e-5, 0.0);
+        drag.apply(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::ZERO);
+    }
+
+    // =========================================================================
+    // RadialForce (squared-space early-out)
+    // =========================================================================
+
+    #[test]
+    fn radial_force_outside_radius_skipped() {
+        let mut explosion = RadialForce::explosion(Vec2::ZERO, 5.0, 100.0);
+        let mut bodies = vec![dynamic_body(0, Vec2::new(10.0, 0.0), 1.0)];
+        explosion.apply(&mut bodies, 0.016);
+        // Body is 10 away, radius 5 -> outside, skipped
+        assert_eq!(bodies[0].velocity, Vec2::ZERO);
+        assert_eq!(bodies[0].force_accumulator, Vec2::ZERO);
+    }
+
+    #[test]
+    fn radial_force_inside_radius_pushes_outward() {
+        let mut explosion = RadialForce::explosion(Vec2::ZERO, 10.0, 100.0);
+        let mut bodies = vec![dynamic_body(0, Vec2::new(5.0, 0.0), 1.0)];
+        explosion.apply(&mut bodies, 0.016);
+        // Body inside, impulse should push outward (positive x direction)
+        assert!(bodies[0].velocity.x > 0.0);
+    }
+
+    #[test]
+    fn black_hole_pulls_inward() {
+        let mut bh = RadialForce::black_hole(Vec2::ZERO, 100.0, 50.0);
+        let mut bodies = vec![dynamic_body(0, Vec2::new(10.0, 0.0), 1.0)];
+        bh.apply(&mut bodies, 0.016);
+        // Continuous force pulling toward origin: negative x force.
+        assert!(bodies[0].force_accumulator.x < 0.0);
+    }
+
+    // =========================================================================
+    // ForceRegistry (verifies clone-free body slicing)
+    // =========================================================================
+
+    #[test]
+    fn force_registry_applies_global_force() {
+        let mut reg = ForceRegistry::new();
+        reg.add_global_force(Box::new(Gravity::new(Vec2::new(0.0, -10.0))));
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        reg.apply_all(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::new(0.0, -10.0));
+    }
+
+    #[test]
+    fn force_registry_body_specific_force_mutates_target_in_place() {
+        // Confirms the slice::from_mut refactor: changes survive without a clone+copy roundtrip.
+        let mut reg = ForceRegistry::new();
+        reg.add_body_force(0, Box::new(LinearDrag::new(0.5)));
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        bodies[0].velocity = Vec2::new(10.0, 0.0);
+        reg.apply_all(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::new(-5.0, 0.0));
+    }
+
+    #[test]
+    fn force_registry_body_specific_does_not_touch_other_bodies() {
+        let mut reg = ForceRegistry::new();
+        reg.add_body_force(1, Box::new(Gravity::new(Vec2::new(0.0, -10.0))));
+        let mut bodies = vec![
+            dynamic_body(0, Vec2::ZERO, 1.0),
+            dynamic_body(1, Vec2::ZERO, 1.0),
+        ];
+        reg.apply_all(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::ZERO);
+        assert_eq!(bodies[1].force_accumulator, Vec2::new(0.0, -10.0));
+    }
+
+    #[test]
+    fn force_registry_clear_drops_all_generators() {
+        let mut reg = ForceRegistry::new();
+        reg.add_global_force(Box::new(Gravity::new(Vec2::new(0.0, -10.0))));
+        reg.add_body_force(0, Box::new(LinearDrag::new(0.5)));
+        reg.clear();
+        let mut bodies = vec![dynamic_body(0, Vec2::ZERO, 1.0)];
+        bodies[0].velocity = Vec2::new(10.0, 0.0);
+        reg.apply_all(&mut bodies, 0.016);
+        assert_eq!(bodies[0].force_accumulator, Vec2::ZERO);
     }
 }

@@ -11,6 +11,16 @@ pub trait Integrator: Send + Sync {
     fn integrate_position(&mut self, body: &mut RigidBody, dt: f32);
 }
 
+/// Recompute linear and angular acceleration from accumulated forces.
+///
+/// Called by integrators at the start of a velocity step. Shared between
+/// `SemiImplicitEuler` and `Verlet` (and any future integrator).
+#[inline]
+fn compute_accelerations(body: &mut RigidBody) {
+    body.acceleration = body.force_accumulator * body.inv_mass;
+    body.angular_acceleration = body.torque_accumulator * body.inv_inertia;
+}
+
 /// Semi-implicit (symplectic) Euler integrator.
 ///
 /// Simple and robust for most real-time games.
@@ -18,12 +28,8 @@ pub struct SemiImplicitEuler;
 
 impl Integrator for SemiImplicitEuler {
     fn integrate_velocity(&mut self, body: &mut RigidBody, dt: f32) {
-        // Linear velocity
-        body.acceleration = body.force_accumulator * body.inv_mass;
+        compute_accelerations(body);
         body.velocity += body.acceleration * dt;
-
-        // Angular velocity
-        body.angular_acceleration = body.torque_accumulator * body.inv_inertia;
         body.angular_velocity += body.angular_acceleration * dt;
     }
 
@@ -35,11 +41,13 @@ impl Integrator for SemiImplicitEuler {
 
 /// Verlet integrator.
 ///
-/// Uses previous positions to calculate velocity and position.
+/// Uses previous positions to calculate velocity and position. Stores history
+/// indexed by `body.id` so per-step lookup is O(1).
 #[derive(Default)]
 pub struct Verlet {
-    /// Previous positions of the bodies.
-    previous_positions: Vec<(usize, Vec2, f32)>, // (id, position, rotation)
+    // Indexed by body.id. Each entry holds (previous_position, previous_rotation).
+    // `None` until first use, then initialized via backward Euler.
+    previous_states: Vec<Option<(Vec2, f32)>>,
 }
 
 impl Verlet {
@@ -48,52 +56,52 @@ impl Verlet {
         Self::default()
     }
 
-    fn get_or_init_previous(&mut self, body: &RigidBody) -> (Vec2, f32) {
-        for (id, pos, rot) in &self.previous_positions {
-            if *id == body.id {
-                return (*pos, *rot);
-            }
+    fn ensure_slot(&mut self, body_id: usize) {
+        if body_id >= self.previous_states.len() {
+            self.previous_states.resize(body_id + 1, None);
         }
+    }
 
-        // Initialize with backward Euler
-        let prev_pos = body.position - body.velocity * 0.016; // Assume 60 FPS
-        let prev_rot = body.angular_velocity.mul_add(-0.016, body.rotation);
-        self.previous_positions.push((body.id, prev_pos, prev_rot));
+    fn get_or_init_previous(&mut self, body: &RigidBody, dt: f32) -> (Vec2, f32) {
+        self.ensure_slot(body.id);
+        if let Some(state) = self.previous_states[body.id] {
+            return state;
+        }
+        // Bootstrap using the current step's `dt` rather than a hardcoded
+        // frame time, so non-60Hz simulations are consistent on the first step.
+        let prev_pos = body.position - body.velocity * dt;
+        let prev_rot = body.angular_velocity.mul_add(-dt, body.rotation);
+        self.previous_states[body.id] = Some((prev_pos, prev_rot));
         (prev_pos, prev_rot)
     }
 
     fn update_previous(&mut self, body: &RigidBody) {
-        for (id, pos, rot) in &mut self.previous_positions {
-            if *id == body.id {
-                *pos = body.position;
-                *rot = body.rotation;
-                return;
-            }
+        if body.id < self.previous_states.len() {
+            self.previous_states[body.id] = Some((body.position, body.rotation));
         }
     }
 }
 
 impl Integrator for Verlet {
     fn integrate_velocity(&mut self, body: &mut RigidBody, _dt: f32) {
-        // Verlet doesn't explicitly track velocity, but we update it for other systems
-        body.acceleration = body.force_accumulator * body.inv_mass;
-        body.angular_acceleration = body.torque_accumulator * body.inv_inertia;
+        // Verlet doesn't explicitly track velocity, but other systems read it.
+        compute_accelerations(body);
     }
 
     fn integrate_position(&mut self, body: &mut RigidBody, dt: f32) {
-        let (prev_pos, prev_rot) = self.get_or_init_previous(body);
+        let (prev_pos, prev_rot) = self.get_or_init_previous(body, dt);
 
         // Verlet integration: x(t+dt) = 2*x(t) - x(t-dt) + a*dt²
         let new_position = body.position * 2.0 - prev_pos + body.acceleration * dt * dt;
         let new_rotation =
             (body.angular_acceleration * dt).mul_add(dt, body.rotation.mul_add(2.0, -prev_rot));
 
+        // Store current as previous for next frame BEFORE updating position.
+        self.update_previous(body);
+
         // Update velocity (for other systems that need it)
         body.velocity = (new_position - body.position) / dt;
         body.angular_velocity = (new_rotation - body.rotation) / dt;
-
-        // Store current as previous for next frame
-        self.update_previous(body);
 
         // Update position
         body.position = new_position;
@@ -126,9 +134,8 @@ mod tests {
     fn euler_velocity_integration_from_force() {
         let mut integrator = SemiImplicitEuler;
         let mut body = create_test_body();
+        body.set_mass(10.0);
         body.force_accumulator = Vec2::new(100.0, 0.0); // 100N force
-        body.mass = 10.0;
-        body.inv_mass = 0.1;
 
         integrator.integrate_velocity(&mut body, 1.0);
 
@@ -153,9 +160,8 @@ mod tests {
     fn euler_angular_velocity_integration() {
         let mut integrator = SemiImplicitEuler;
         let mut body = create_test_body();
+        body.set_inertia(10.0);
         body.torque_accumulator = 50.0;
-        body.inertia = 10.0;
-        body.inv_inertia = 0.1;
 
         integrator.integrate_velocity(&mut body, 1.0);
 
@@ -180,13 +186,10 @@ mod tests {
     fn euler_combined_linear_and_angular() {
         let mut integrator = SemiImplicitEuler;
         let mut body = create_test_body();
-
+        body.set_mass(1.0);
+        body.set_inertia(1.0);
         body.force_accumulator = Vec2::new(10.0, 10.0);
-        body.mass = 1.0;
-        body.inv_mass = 1.0;
         body.torque_accumulator = 5.0;
-        body.inertia = 1.0;
-        body.inv_inertia = 1.0;
 
         integrator.integrate_velocity(&mut body, 1.0);
         integrator.integrate_position(&mut body, 1.0);
@@ -253,5 +256,52 @@ mod tests {
         // Bodies should move in opposite directions
         assert!(body1.position.x > 0.0);
         assert!(body2.position.x < 0.0);
+    }
+
+    #[test]
+    fn verlet_handles_sparse_body_ids() {
+        // Regression test for the index-by-id storage: bodies can have
+        // non-contiguous IDs (e.g. after removals), and the history Vec must
+        // grow lazily without crashing.
+        let mut integrator = Verlet::new();
+
+        let mut body_5 = create_test_body();
+        body_5.id = 5;
+        body_5.velocity = Vec2::new(1.0, 0.0);
+
+        let mut body_42 = create_test_body();
+        body_42.id = 42;
+        body_42.velocity = Vec2::new(-1.0, 0.0);
+
+        integrator.integrate_velocity(&mut body_5, 0.016);
+        integrator.integrate_position(&mut body_5, 0.016);
+        integrator.integrate_velocity(&mut body_42, 0.016);
+        integrator.integrate_position(&mut body_42, 0.016);
+
+        // Both should have moved without panicking on the sparse storage.
+        assert!(body_5.position.x > 0.0);
+        assert!(body_42.position.x < 0.0);
+    }
+
+    #[test]
+    fn verlet_uses_actual_dt_for_initial_bootstrap() {
+        // Earlier implementation hardcoded 0.016 for the previous-position
+        // bootstrap; with a different `dt`, that produced an incorrect first
+        // step. New implementation uses the supplied `dt`.
+        let mut integrator = Verlet::new();
+        let mut body = create_test_body();
+        body.velocity = Vec2::new(10.0, 0.0);
+
+        let dt = 0.1;
+        integrator.integrate_velocity(&mut body, dt);
+        integrator.integrate_position(&mut body, dt);
+
+        // After one Verlet step with consistent dt, position should advance by
+        // ~v*dt (= 1.0), not v*0.016 (=0.16) as the old hardcoded version did.
+        assert!(
+            (body.position.x - 1.0).abs() < 0.1,
+            "Verlet first-step at dt=0.1 should advance ~1.0, got {}",
+            body.position.x
+        );
     }
 }

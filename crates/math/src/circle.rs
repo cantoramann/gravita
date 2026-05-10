@@ -1,5 +1,5 @@
 // math/src/circle.rs
-use crate::{aabb::AABB, vector2::Vec2};
+use crate::{aabb::Aabb, vector2::Vec2};
 
 /// Circle primitive used for simple collision and broad-phase acceleration.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -29,20 +29,14 @@ impl Circle {
     }
 
     /// Test for intersection with an axis-aligned bounding box.
-    pub fn intersects_aabb(&self, aabb: &AABB) -> bool {
-        // Find closest point on AABB to circle center
-        let closest = Vec2::new(
-            self.center.x.clamp(aabb.min.x, aabb.max.x),
-            self.center.y.clamp(aabb.min.y, aabb.max.y),
-        );
-
-        self.contains_point(closest)
+    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
+        self.contains_point(aabb.closest_point(self.center))
     }
 
-    /// Compute the tight AABB that encloses this circle.
-    pub fn to_aabb(&self) -> AABB {
+    /// Compute the tight Aabb that encloses this circle.
+    pub fn to_aabb(&self) -> Aabb {
         let radius_vec = Vec2::new(self.radius, self.radius);
-        AABB {
+        Aabb {
             min: self.center - radius_vec,
             max: self.center + radius_vec,
         }
@@ -136,20 +130,20 @@ mod tests {
     }
 
     // =========================================================================
-    // Circle-AABB Intersection
+    // Circle-Aabb Intersection
     // =========================================================================
 
     #[test]
     fn intersects_aabb_when_overlapping() {
         let c = Circle::new(Vec2::new(5.0, 5.0), 10.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(c.intersects_aabb(&aabb));
     }
 
     #[test]
     fn intersects_aabb_circle_inside() {
         let c = Circle::new(Vec2::new(5.0, 5.0), 2.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(c.intersects_aabb(&aabb));
     }
 
@@ -157,19 +151,19 @@ mod tests {
     fn intersects_aabb_touching_corner() {
         // Circle at corner, touching exactly
         let c = Circle::new(Vec2::new(-5.0, -5.0), 5.0 * 2.0_f32.sqrt());
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(c.intersects_aabb(&aabb));
     }
 
     #[test]
     fn does_not_intersect_aabb_when_separated() {
         let c = Circle::new(Vec2::new(-20.0, 5.0), 5.0);
-        let aabb = AABB::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
+        let aabb = Aabb::new(Vec2::ZERO, Vec2::new(10.0, 10.0));
         assert!(!c.intersects_aabb(&aabb));
     }
 
     // =========================================================================
-    // AABB Conversion
+    // Aabb Conversion
     // =========================================================================
 
     #[test]

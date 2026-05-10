@@ -80,8 +80,13 @@ impl Contact {
 ///
 /// Used for edge-edge and face-face collisions where multiple
 /// contact points improve stability.
+///
+/// Currently unused by the v0.1 narrow phase (Circle/Aabb pairs produce a
+/// single contact each). Kept `pub(crate)` so polygon support can pick it up
+/// without bumping the public API.
+#[allow(dead_code)] // scaffolding for upcoming polygon narrow phase
 #[derive(Debug, Clone)]
-pub struct ContactManifold {
+pub(crate) struct ContactManifold {
     /// Index of the first body.
     pub body_a: usize,
     /// Index of the second body.
@@ -92,9 +97,10 @@ pub struct ContactManifold {
     pub contact_count: usize,
 }
 
+#[allow(dead_code)] // scaffolding for upcoming polygon narrow phase
 impl ContactManifold {
     /// Create a new empty manifold.
-    pub fn new(body_a: usize, body_b: usize) -> Self {
+    pub(crate) fn new(body_a: usize, body_b: usize) -> Self {
         Self {
             body_a,
             body_b,
@@ -104,7 +110,7 @@ impl ContactManifold {
     }
 
     /// Add a contact point, merging with existing nearby contacts.
-    pub fn add_contact(&mut self, contact: Contact) {
+    pub(crate) fn add_contact(&mut self, contact: Contact) {
         // Merge similar contacts to avoid redundancy
         const MERGE_THRESHOLD: f32 = 0.01;
 
@@ -123,7 +129,7 @@ impl ContactManifold {
     }
 
     /// Remove all contacts from the manifold.
-    pub fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.contacts.clear();
         self.contact_count = 0;
     }
