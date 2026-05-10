@@ -2,6 +2,8 @@
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use crate::vector::Vector;
+
 /// Simple 2D vector type used throughout the engine.
 ///
 /// This is intentionally minimal and dependency-free, but still supports
@@ -157,6 +159,17 @@ impl Vec2 {
     /// Clamp each component between the corresponding components of `min` and `max`.
     pub fn clamp(&self, min: Self, max: Self) -> Self {
         Self::new(self.x.clamp(min.x, max.x), self.y.clamp(min.y, max.y))
+    }
+}
+
+impl Vector for Vec2 {
+    const ZERO: Self = Self::ZERO;
+
+    fn dot(self, other: Self) -> f32 {
+        Self::dot(&self, other)
+    }
+    fn length_squared(self) -> f32 {
+        Self::length_squared(&self)
     }
 }
 

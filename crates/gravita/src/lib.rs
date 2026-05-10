@@ -92,7 +92,10 @@ pub mod prelude {
     #[cfg(feature = "collections")]
     pub use gravita_collections::{Planet, Spaceship, Stickman};
     #[cfg(feature = "math")]
-    pub use gravita_math::{Aabb, Circle, PI, Ray2D, TAU, Transform2D, Vec2};
+    pub use gravita_math::{
+        Aabb, Aabb3, Circle, PI, Quat, Ray2D, Ray3D, RayHit3D, Sphere, TAU, Transform2D,
+        Transform3D, Vec2, Vec3, Vector,
+    };
     // Physics types
     #[cfg(feature = "physics")]
     pub use gravita_physics::{

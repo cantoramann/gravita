@@ -1,53 +1,72 @@
 // math/src/lib.rs
 
-//! Minimal 2D math primitives for game development and physics simulation.
+//! Math primitives for 2D and 3D game development and physics simulation.
 //!
-//! This crate provides core mathematical types that are used throughout
-//! the Gravita engine:
+//! 2D types: [`Vec2`], [`Aabb`], [`Circle`], [`Ray2D`], [`Transform2D`].
+//! 3D types: [`Vec3`], [`Quat`], [`Aabb3`], [`Sphere`], [`Ray3D`], [`Transform3D`].
 //!
-//! - [`Vec2`] — 2D vector with common operations (add, scale, normalize, rotate, etc.)
-//! - [`Aabb`] — Axis-aligned bounding box for collision queries
-//! - [`Circle`] — Circle primitive for collision detection
-//! - [`Ray2D`] — Ray for raycasting and intersection tests
-//! - [`Transform2D`] — Position + rotation transform
+//! For dim-agnostic algorithms, write against the [`Vector`] trait — both
+//! `Vec2` and `Vec3` implement it.
 //!
 //! # Design Goals
 //!
 //! - **Zero dependencies**: Core math should compile instantly
 //! - **Inline everything**: Performance-critical code path
-//! - **Simple API**: Prefer free functions and methods over traits
+//! - **Ergonomic field access**: `v.x`, `v.y`, `v.z` over generic indexing
 //!
 //! # Examples
 //!
 //! ```
-//! use gravita_math::{Vec2, clamp, lerp};
+//! use gravita_math::{Vec2, Vec3, clamp, lerp};
 //!
 //! let velocity = Vec2::new(100.0, 50.0);
-//! let normalized = velocity.normalize();
 //! let clamped = clamp(velocity.length(), 0.0, 200.0);
+//!
+//! let world_up = Vec3::Y;
 //! ```
 
 #![warn(missing_docs)]
 
-/// Axis-aligned bounding box for spatial queries and collision detection.
+/// 2D axis-aligned bounding box.
 pub mod aabb;
-/// Circle primitive for collision detection and rendering.
+/// 3D axis-aligned bounding box.
+pub mod aabb3;
+/// 2D circle primitive.
 pub mod circle;
-/// 2D ray for raycasting and intersection tests.
+/// Unit quaternion for 3D rotation.
+pub mod quat;
+/// 2D ray + intersection tests.
 pub mod ray;
-/// 2D transform combining position and rotation.
+/// 3D ray + intersection tests.
+pub mod ray3;
+/// 3D sphere primitive.
+pub mod sphere;
+/// 2D transform (position + rotation).
 pub mod transform;
-/// 2D vector type with comprehensive operations.
+/// 3D transform (position + rotation + scale).
+pub mod transform3;
+/// `Vector` trait shared by [`Vec2`] and [`Vec3`].
+pub mod vector;
+/// 2D vector type.
 pub mod vector2;
+/// 3D vector type.
+pub mod vector3;
 
 // Re-export common math functions
 pub use std::f32::consts::{PI, TAU};
 
 pub use aabb::Aabb;
+pub use aabb3::Aabb3;
 pub use circle::Circle;
+pub use quat::Quat;
 pub use ray::{Ray2D, RayHit};
+pub use ray3::{Ray3D, RayHit3D};
+pub use sphere::Sphere;
 pub use transform::Transform2D;
+pub use transform3::Transform3D;
+pub use vector::Vector;
 pub use vector2::Vec2;
+pub use vector3::Vec3;
 
 /// Linearly interpolate between two values
 #[inline]
