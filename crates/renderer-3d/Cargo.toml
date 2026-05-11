@@ -11,6 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+gravita-input = { workspace = true }
 gravita-math = { workspace = true }
 
 bytemuck = "1.16"

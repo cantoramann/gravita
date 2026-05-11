@@ -1,75 +1,70 @@
 //! # Gravita
 //!
-//! A modular 2D physics engine and game framework for Rust.
+//! A small, readable 2D + 3D physics engine and game framework for Rust.
 //!
-//! Gravita provides everything you need to build 2D games and physics simulations:
+//! The umbrella crate re-exports every other gravita crate behind a cargo
+//! feature so consumers compile only what they need.
 //!
-//! - **Math primitives**: Vectors, transforms, shapes (Aabb, Circle, Ray)
-//! - **Physics simulation**: Rigid body dynamics, collision detection and response
-//! - **Rendering utilities**: Simple CPU-based 2D drawing primitives
-//! - **Game objects**: Pre-built entities like Stickman, Spaceship, Planet
-//!
-//! ## Quick Start
+//! ## Quick Start (2D)
 //!
 //! ```rust
 //! use gravita::prelude::*;
 //!
-//! // Create a physics world
 //! let mut world = PhysicsWorld::new();
-//!
-//! // Add a dynamic circle
 //! let shape = CollisionShape::Circle(Circle::new(Vec2::ZERO, 10.0));
 //! let ball = RigidBody::new(0, shape)
 //!     .with_position(Vec2::new(100.0, 100.0))
 //!     .with_velocity(Vec2::new(50.0, -30.0));
 //! world.add_body(ball);
-//!
-//! // Step the simulation
 //! world.step(1.0 / 60.0);
 //! ```
 //!
-//! ## Feature Flags
-//!
-//! Enable only what you need:
+//! ## Quick Start (3D)
 //!
 //! ```toml
-//! [dependencies]
-//! gravita = { version = "0.1", default-features = false, features = ["math", "physics"] }
+//! gravita = { version = "0.1", default-features = false, features = ["math", "physics-3d", "renderer-3d"] }
 //! ```
+//!
+//! ```ignore
+//! use gravita::prelude::*;
+//!
+//! let mut world = PhysicsWorld3D::new();
+//! world.set_gravity(Vec3::new(0.0, -9.81, 0.0));
+//! let ball = RigidBody3D::new(0, CollisionShape3D::Sphere(Sphere::new(Vec3::ZERO, 0.5)))
+//!     .with_position(Vec3::new(0.0, 5.0, 0.0));
+//! world.add_body(ball);
+//! world.step(1.0 / 60.0);
+//! ```
+//!
+//! ## Feature flags
 //!
 //! | Feature | Default | Description |
 //! |---------|---------|-------------|
-//! | `math` | ✅ | 2D math primitives (Vec2, Aabb, Circle, etc.) |
-//! | `physics` | ✅ | Physics engine (RigidBody, PhysicsWorld, etc.) |
-//! | `renderer` | ✅ | CPU-based 2D rendering utilities |
-//! | `collections` | ❌ | Pre-built game objects (Stickman, Spaceship) |
-//! | `engine-core` | ❌ | Core engine integration layer |
-//! | `input` | ❌ | Input handling abstraction |
-//! | `assets` | ❌ | Asset loading utilities |
-//! | `full` | ❌ | Enable all features |
+//! | `math` | yes | 2D + 3D math (Vec2, Vec3, Quat, Aabb, Aabb3, Sphere, Obb, ...) |
+//! | `physics` | yes | 2D rigid-body sim |
+//! | `physics-3d` | no | 3D rigid-body sim |
+//! | `renderer` | yes | 2D CPU framebuffer rasterizer |
+//! | `renderer-3d` | no | wgpu 3D renderer + winit runner |
+//! | `collections` | no | Pre-built 2D characters (Stickman, Spaceship, Planet) |
+//! | `input` | no | Input snapshot (keyboard + mouse + cursor) |
+//! | `full` | no | All features above |
 //!
-//! ## Crate Structure
+//! ## Crate map
 //!
-//! Gravita is composed of several focused crates:
-//!
-//! - [`gravita-math`](https://docs.rs/gravita-math) - Math primitives
-//! - [`gravita-physics`](https://docs.rs/gravita-physics) - Physics simulation
-//! - [`gravita-renderer`](https://docs.rs/gravita-renderer) - Rendering utilities
-//! - [`gravita-collections`](https://docs.rs/gravita-collections) - Game objects
-//! - [`gravita-engine-core`](https://docs.rs/gravita-engine-core) - Engine core
-//! - [`gravita-input`](https://docs.rs/gravita-input) - Input handling
-//! - [`gravita-assets`](https://docs.rs/gravita-assets) - Asset loading
+//! - [`gravita-math`](https://docs.rs/gravita-math) — math primitives
+//! - [`gravita-physics`](https://docs.rs/gravita-physics) — 2D physics
+//! - [`gravita-physics-3d`](https://docs.rs/gravita-physics-3d) — 3D physics
+//! - [`gravita-renderer`](https://docs.rs/gravita-renderer) — 2D rasterizer
+//! - [`gravita-renderer-3d`](https://docs.rs/gravita-renderer-3d) — wgpu 3D renderer
+//! - [`gravita-collections`](https://docs.rs/gravita-collections) — example game objects
+//! - [`gravita-input`](https://docs.rs/gravita-input) — input state snapshot
 
 #![warn(missing_docs)]
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 
-#[cfg(feature = "assets")]
-pub use gravita_assets as assets;
 #[cfg(feature = "collections")]
 pub use gravita_collections as collections;
-#[cfg(feature = "engine-core")]
-pub use gravita_engine_core as engine_core;
 #[cfg(feature = "input")]
 pub use gravita_input as input;
 #[cfg(feature = "math")]
@@ -91,23 +86,19 @@ pub use gravita_renderer_3d as renderer_3d;
 /// use gravita::prelude::*;
 /// ```
 pub mod prelude {
-    // Math types
-    // Collections types
     #[cfg(feature = "collections")]
     pub use gravita_collections::{Planet, Spaceship, Stickman};
     #[cfg(feature = "math")]
     pub use gravita_math::{
-        Aabb, Aabb3, Circle, PI, Quat, Ray2D, Ray3D, RayHit3D, Sphere, TAU, Transform2D,
+        Aabb, Aabb3, Circle, Obb, PI, Quat, Ray2D, Ray3D, RayHit3D, Sphere, TAU, Transform2D,
         Transform3D, Vec2, Vec3, Vector,
     };
-    // Physics types
     #[cfg(feature = "physics")]
     pub use gravita_physics::{
         BodyType, CollisionShape, PhysicsWorld, RigidBody,
         collision::{CollisionDetector, Contact, SimpleCollisionDetector, SpatialHashDetector},
         integrator::{Integrator, SemiImplicitEuler, Verlet},
     };
-    // Physics 3D types
     #[cfg(feature = "physics-3d")]
     pub use gravita_physics_3d::{
         BodyType as BodyType3D, CollisionShape as CollisionShape3D, Contact as Contact3D,
@@ -115,11 +106,8 @@ pub mod prelude {
         SemiImplicitEuler as SemiImplicitEuler3D,
         SimpleCollisionDetector as SimpleCollisionDetector3D,
     };
-    // Renderer types
     #[cfg(feature = "renderer")]
     pub use gravita_renderer::{clear, draw_axes, draw_circle, draw_line};
-    // Renderer 3D types — typically the entry point users want is `run` +
-    // the `App3D` trait. The full surface is available via `gravita::renderer_3d`.
     #[cfg(feature = "renderer-3d")]
     pub use gravita_renderer_3d::{
         App3D, Camera as Camera3D, Instance as Instance3D, Mesh as Mesh3D,

@@ -368,6 +368,18 @@ struct TetrisGame {
     last_update: Instant,
 }
 
+/// Per-call config for `TetrisGame::draw_cell` — keeps the function signature
+/// at a reasonable arg count and gives each parameter a name at the call site.
+#[derive(Debug, Copy, Clone)]
+struct CellDraw {
+    col: usize,
+    row: usize,
+    color: [u8; 4],
+    flash: f32,
+    shake_x: i32,
+    shake_y: i32,
+}
+
 impl TetrisGame {
     fn new() -> Self {
         let mut game = Self {
@@ -886,7 +898,17 @@ impl TetrisGame {
                         0.0
                     };
 
-                    self.draw_cell(frame, col, row, color, flash, shake_x, shake_y);
+                    self.draw_cell(
+                        frame,
+                        CellDraw {
+                            col,
+                            row,
+                            color,
+                            flash,
+                            shake_x,
+                            shake_y,
+                        },
+                    );
                 }
             }
         }
@@ -920,7 +942,17 @@ impl TetrisGame {
             let color = self.current_piece.piece_type.color();
             for (x, y) in self.current_piece.cells() {
                 if y >= 0 {
-                    self.draw_cell(frame, x as usize, y as usize, color, 0.0, shake_x, shake_y);
+                    self.draw_cell(
+                        frame,
+                        CellDraw {
+                            col: x as usize,
+                            row: y as usize,
+                            color,
+                            flash: 0.0,
+                            shake_x,
+                            shake_y,
+                        },
+                    );
                 }
             }
         }
@@ -1117,16 +1149,15 @@ impl TetrisGame {
         }
     }
 
-    fn draw_cell(
-        &self,
-        frame: &mut [u8],
-        col: usize,
-        row: usize,
-        color: [u8; 4],
-        flash: f32,
-        shake_x: i32,
-        shake_y: i32,
-    ) {
+    fn draw_cell(&self, frame: &mut [u8], cell: CellDraw) {
+        let CellDraw {
+            col,
+            row,
+            color,
+            flash,
+            shake_x,
+            shake_y,
+        } = cell;
         let x0 = GRID_OFFSET_X as i32 + col as i32 * CELL_SIZE as i32 + shake_x;
         let y0 = GRID_OFFSET_Y as i32 + row as i32 * CELL_SIZE as i32 + shake_y;
         let size = CELL_SIZE as i32;

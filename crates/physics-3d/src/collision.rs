@@ -307,6 +307,9 @@ pub fn test_aabb_aabb(a: &Aabb3, b: &Aabb3, a_idx: usize, b_idx: usize) -> Optio
 pub fn test_pair(bodies: &[RigidBody], i: usize, j: usize, out: &mut Vec<Contact>) {
     let body_a = &bodies[i];
     let body_b = &bodies[j];
+    if !body_a.enabled || !body_b.enabled {
+        return;
+    }
     if body_a.body_type() == BodyType::Static && body_b.body_type() == BodyType::Static {
         return;
     }

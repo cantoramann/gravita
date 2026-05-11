@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/rust-nightly--2025-orange?logo=rust" alt="Rust nightly 2025">
+  <img src="https://img.shields.io/badge/rust-nightly-orange?logo=rust" alt="Rust nightly">
   <img src="https://img.shields.io/github/license/cantoramann/gravita" alt="MIT licensed">
   <img src="https://img.shields.io/badge/2D-pixels-blue" alt="2D pixels">
   <img src="https://img.shields.io/badge/3D-wgpu-purple" alt="3D wgpu">
-  <img src="https://img.shields.io/badge/tests-513%20passing-brightgreen" alt="513 tests passing">
+  <img src="https://img.shields.io/badge/WASM-handwritten%20bindings-yellow" alt="WASM bindings">
 </p>
 
 # Gravita
@@ -107,7 +107,7 @@ fn main() {
     for _ in 0..600 {
         world.step(1.0 / 60.0);
     }
-    println!("Ball ended at {:?}", world.get_bodies()[1].position);
+    println!("Ball ended at {:?}", world.bodies()[1].position);
 }
 ```
 
@@ -137,6 +137,39 @@ fn main() {
 
 For graphics, take `examples/spheres-3d/src/main.rs` as the template — it's <200 LOC of game code plus the `App3D` trait.
 
+### 6. Use it from JavaScript / TypeScript
+
+The [`gravita-wasm`](crates/wasm) crate ships **handwritten** WebAssembly bindings — every method is shaped for JS readers (plain numeric arguments, `Float32Array` returns), not the verbose builder pattern an auto-generated `wasm-bindgen` surface would produce.
+
+```bash
+# One-time:
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+
+# Build the JS package:
+wasm-pack build crates/wasm --target web --release
+```
+
+That writes a ~75 KB `gravita_wasm_bg.wasm` plus a JS loader and TypeScript `.d.ts` into `crates/wasm/pkg/`. Then in your page:
+
+```js
+import init, { World2D, BodyKind } from "./pkg/gravita_wasm.js";
+
+await init();
+
+const world = new World2D(0, -500);
+const floor = world.addBox(0, 0, 800, 50);
+world.setBodyKind(floor, BodyKind.Static);
+
+const ball = world.addCircle(0, 300, 20);
+world.setBodyRestitution(ball, 0.8);
+
+for (let i = 0; i < 600; i++) world.step(1 / 60);
+console.log(world.bodyPosition(ball));   // Float32Array [x, y]
+```
+
+3D works the same way — substitute `World3D` and three-component vectors. See [`crates/wasm/README.md`](crates/wasm/README.md) for the full surface.
+
 ---
 
 ## Repo layout
@@ -150,10 +183,9 @@ gravita/
 │   ├── renderer/          # CPU 2D rasterizer
 │   ├── renderer-3d/       # wgpu 3D renderer + winit runner
 │   ├── collections/       # Pre-built 2D game objects (Stickman, Spaceship, Planet)
+│   ├── input/             # Cross-app input state (keys, mouse, cursor)
+│   ├── wasm/              # JS-friendly WebAssembly bindings (World2D + World3D)
 │   ├── example-shim/      # Internal: winit/pixels glue for 2D examples
-│   ├── engine-core/       # Placeholder for a future high-level engine
-│   ├── input/             # Placeholder for a future input abstraction
-│   ├── assets/            # Placeholder for asset loading
 │   └── gravita/           # Umbrella crate — re-exports everything via features
 ├── examples/
 │   ├── bouncing-balls/    # 2D physics

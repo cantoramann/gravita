@@ -1,0 +1,33 @@
+[package]
+name = "gravita-wasm"
+description = "JavaScript-friendly WebAssembly bindings for the Gravita physics engine"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["physics", "wasm", "javascript", "web", "gamedev"]
+categories = ["wasm", "game-engines", "simulation"]
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[lib]
+# `cdylib` produces a .wasm artifact for wasm-pack; `rlib` keeps the crate
+# usable as a normal Rust library too (for tests + dependents).
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+gravita-math = { workspace = true }
+gravita-physics = { workspace = true }
+gravita-physics-3d = { workspace = true }
+
+# WASM-only deps. Native builds compile to an empty hull because the entire
+# crate is gated to `target_arch = "wasm32"` (see lib.rs).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"

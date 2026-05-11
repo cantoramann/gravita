@@ -1,16 +1,16 @@
 [package]
 name = "gravita-input"
-description = "Input handling abstraction layer for Gravita game framework"
+description = "Input state snapshot (keyboard + mouse + cursor) shared by Gravita example runners"
 version = "0.1.0"
-publish = false
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords = ["input", "keyboard", "mouse", "gamepad", "gamedev"]
+keywords = ["input", "keyboard", "mouse", "gamedev"]
 categories = ["game-engines"]
 
 [lints]
 workspace = true
 
 [dependencies]
+winit = { workspace = true }

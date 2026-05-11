@@ -36,18 +36,16 @@
 // Acceptable in example scaffolding where there is no log subscriber wired up.
 #![allow(clippy::print_stderr)]
 
-use std::{
-    collections::HashSet,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
+pub use gravita_input::{Input, KeyCode, MouseButton};
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{ElementState, MouseButton, WindowEvent},
+    event::{ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::{KeyCode, PhysicalKey},
+    keyboard::PhysicalKey,
     window::{Window, WindowAttributes, WindowId},
 };
 
@@ -83,69 +81,6 @@ pub trait App: 'static {
 
     /// Draw the current state into the RGBA frame buffer.
     fn render(&self, frame: &mut [u8]);
-}
-
-/// Snapshot of keyboard, mouse, and window state accessible during
-/// [`App::update`].
-#[derive(Debug, Default)]
-pub struct Input {
-    keys_held: HashSet<KeyCode>,
-    keys_pressed_this_frame: HashSet<KeyCode>,
-    keys_released_this_frame: HashSet<KeyCode>,
-    mouse_held: HashSet<MouseButton>,
-    mouse_pressed_this_frame: HashSet<MouseButton>,
-    cursor: Option<(f32, f32)>,
-    close_requested: bool,
-}
-
-impl Input {
-    /// `true` while the key is held down.
-    #[must_use]
-    pub fn key_held(&self, key: KeyCode) -> bool {
-        self.keys_held.contains(&key)
-    }
-
-    /// `true` only on the frame the key first went down.
-    #[must_use]
-    pub fn key_pressed(&self, key: KeyCode) -> bool {
-        self.keys_pressed_this_frame.contains(&key)
-    }
-
-    /// `true` only on the frame the key was released.
-    #[must_use]
-    pub fn key_released(&self, key: KeyCode) -> bool {
-        self.keys_released_this_frame.contains(&key)
-    }
-
-    /// `true` while the mouse button is held.
-    #[must_use]
-    pub fn mouse_held(&self, button: MouseButton) -> bool {
-        self.mouse_held.contains(&button)
-    }
-
-    /// `true` only on the frame the button first went down.
-    #[must_use]
-    pub fn mouse_pressed(&self, button: MouseButton) -> bool {
-        self.mouse_pressed_this_frame.contains(&button)
-    }
-
-    /// Last reported cursor position in logical pixels, if any.
-    #[must_use]
-    pub fn cursor(&self) -> Option<(f32, f32)> {
-        self.cursor
-    }
-
-    /// `true` if the user requested window close (X button or Esc).
-    #[must_use]
-    pub fn close_requested(&self) -> bool {
-        self.close_requested
-    }
-
-    fn begin_frame(&mut self) {
-        self.keys_pressed_this_frame.clear();
-        self.keys_released_this_frame.clear();
-        self.mouse_pressed_this_frame.clear();
-    }
 }
 
 struct Runner<A: App> {
@@ -213,7 +148,7 @@ impl<A: App> ApplicationHandler for Runner<A> {
     ) {
         match event {
             WindowEvent::CloseRequested => {
-                self.input.close_requested = true;
+                self.input.set_close_requested(true);
                 event_loop.exit();
             },
             WindowEvent::KeyboardInput {
@@ -221,31 +156,23 @@ impl<A: App> ApplicationHandler for Runner<A> {
             } => {
                 if let PhysicalKey::Code(code) = key_event.physical_key {
                     match key_event.state {
-                        ElementState::Pressed => {
-                            if !key_event.repeat && self.input.keys_held.insert(code) {
-                                self.input.keys_pressed_this_frame.insert(code);
-                            }
+                        ElementState::Pressed if !key_event.repeat => {
+                            self.input.record_key_press(code);
                         },
                         ElementState::Released => {
-                            if self.input.keys_held.remove(&code) {
-                                self.input.keys_released_this_frame.insert(code);
-                            }
+                            self.input.record_key_release(code);
                         },
+                        ElementState::Pressed => {},
                     }
                 }
             },
             WindowEvent::CursorMoved { position, .. } => {
-                self.input.cursor = Some((position.x as f32, position.y as f32));
+                self.input
+                    .set_cursor(Some((position.x as f32, position.y as f32)));
             },
             WindowEvent::MouseInput { state, button, .. } => match state {
-                ElementState::Pressed => {
-                    if self.input.mouse_held.insert(button) {
-                        self.input.mouse_pressed_this_frame.insert(button);
-                    }
-                },
-                ElementState::Released => {
-                    self.input.mouse_held.remove(&button);
-                },
+                ElementState::Pressed => self.input.record_mouse_press(button),
+                ElementState::Released => self.input.record_mouse_release(button),
             },
             WindowEvent::RedrawRequested => {
                 if let Some(pixels) = self.pixels.as_mut() {
@@ -278,7 +205,7 @@ impl<A: App> ApplicationHandler for Runner<A> {
 
         // Esc exits the demo (in addition to the OS close button).
         if self.input.key_pressed(KeyCode::Escape) {
-            self.input.close_requested = true;
+            self.input.set_close_requested(true);
             event_loop.exit();
             return;
         }
@@ -318,5 +245,7 @@ pub fn run<A: App>(config: WindowConfig, app: A) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
-// Re-exports so examples don't need to add winit to their own deps.
-pub use winit::{event::MouseButton as ShimMouseButton, keyboard::KeyCode as ShimKeyCode};
+// Backwards-compatible aliases — older example code referenced `ShimKeyCode`
+// and `ShimMouseButton`. New code should use the bare `KeyCode` / `MouseButton`
+// re-exported above.
+pub use gravita_input::{KeyCode as ShimKeyCode, MouseButton as ShimMouseButton};

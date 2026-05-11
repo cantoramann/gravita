@@ -8,7 +8,7 @@ If you're a human reading this: it doubles as a "where does what live" cheat she
 
 ## Workspace shape
 
-11 library crates + 8 examples. Two parallel pipelines (2D and 3D) sit on a shared `gravita-math` crate.
+10 library crates + 8 examples. Two parallel pipelines (2D and 3D) sit on a shared `gravita-math` crate.
 
 ```text
 crates/
@@ -18,10 +18,9 @@ crates/
 ├── renderer/          # CPU 2D framebuffer rasterizer. depends on math.
 ├── renderer-3d/       # wgpu 3D renderer + winit runner. depends on math.
 ├── collections/       # 2D Stickman/Spaceship/Planet. depends on math + renderer.
+├── input/             # Cross-app input state (keys, mouse, cursor). Used by 2D + 3D runners.
+├── wasm/              # JS-friendly WebAssembly bindings (handwritten, wasm32-only).
 ├── example-shim/      # Internal: winit/pixels glue for 2D examples.
-├── engine-core/       # Placeholder (~30 LOC of doc comments).
-├── input/             # Placeholder.
-├── assets/            # Placeholder.
 └── gravita/           # Umbrella with feature flags + prelude.
 
 examples/
@@ -35,8 +34,6 @@ examples/
 └── spheres-3d/        # 3D physics-3d + renderer-3d together
 ```
 
-Placeholder crates (`engine-core`, `input`, `assets`) are intentional — they reserve names + ship as `publish = false` until real implementations land. **Do not delete them.**
-
 ---
 
 ## How to verify changes
@@ -45,13 +42,16 @@ Run these from the repo root. Everything must stay green.
 
 ```bash
 cargo build --workspace --all-targets
-cargo test --workspace            # current baseline: 513 passing, 0 failing, 7 ignored
+cargo test --workspace
 cargo clippy --workspace --all-targets
 cargo fmt --all -- --check
 cargo doc --workspace --no-deps   # must not introduce broken intra-doc links
-```
 
-**One known pre-existing warning**: `tetris/src/main.rs` has a `draw_cell` with 8 args. That predates this work and is not in scope for ordinary changes.
+# WASM bindings build separately (target is wasm32-unknown-unknown):
+cargo build --target wasm32-unknown-unknown -p gravita-wasm --release
+# Or end-to-end (produces crates/wasm/pkg/):
+wasm-pack build crates/wasm --target web --release
+```
 
 For perf-sensitive changes touching `physics`, `physics-3d`, or `math`, run the relevant `cargo bench -p <crate>` before and after.
 
@@ -130,6 +130,8 @@ When adding new fields, classify them into one of these three categories before 
 | WGSL shader | [`crates/renderer-3d/src/shader.wgsl`](crates/renderer-3d/src/shader.wgsl) |
 | 2D example runner (`App` trait) | [`crates/example-shim/src/lib.rs`](crates/example-shim/src/lib.rs) |
 | 3D example runner (`App3D` trait) | [`crates/renderer-3d/src/runner.rs`](crates/renderer-3d/src/runner.rs) |
+| Shared input state | [`crates/input/src/lib.rs`](crates/input/src/lib.rs) |
+| WASM bindings (handwritten) | [`crates/wasm/src/lib.rs`](crates/wasm/src/lib.rs) |
 
 ---
 
@@ -163,6 +165,16 @@ When adding new fields, classify them into one of these three categories before 
    - 3D: `gravita-math`, `gravita-physics-3d`, `gravita-renderer-3d`.
 2. Implement `gravita_example_shim::App` (2D) or `gravita_renderer_3d::App3D` (3D).
 3. Add `examples/<name>` to the workspace `members` in the top-level `Cargo.toml`.
+
+### Add to the JS-facing WASM surface
+
+The whole [`crates/wasm/`](crates/wasm/) crate is gated to `#![cfg(target_arch = "wasm32")]`. On native builds it compiles to an empty hull, so `cargo build --workspace` is unaffected by anything you add there.
+
+1. Add a method on `World2D` or `World3D` in [`crates/wasm/src/lib.rs`](crates/wasm/src/lib.rs). Use camelCase naming (the `#![allow(non_snake_case)]` is set at the crate root for this reason).
+2. **Parameters**: use plain scalars (`f32`, `usize`, `bool`) or `#[wasm_bindgen]`-annotated enums like `BodyKind`. Do NOT use `[f32; N]` — it doesn't implement `FromWasmAbi`.
+3. **Returns**: for vectors return `js_sys::Float32Array` (see the `copy_f32` helper). For scalars return them directly.
+4. Verify with `cargo build --target wasm32-unknown-unknown -p gravita-wasm --release`, then a full `wasm-pack build crates/wasm --target web --release` to regenerate the TS bindings.
+5. Update [`crates/wasm/README.md`](crates/wasm/README.md)'s "API surface" section.
 
 ---
 
@@ -215,4 +227,6 @@ Don't do these unless the user asks:
 | Format check | `cargo fmt --all -- --check` |
 | Build 2D example | `cargo run -p bouncing-balls` |
 | Build 3D example | `cargo run -p spheres-3d` |
-| WASM build | `cargo build --target wasm32-unknown-unknown -p froggy-jump` |
+| WASM bindings (Rust target) | `cargo build --target wasm32-unknown-unknown -p gravita-wasm --release` |
+| WASM bindings (npm package) | `wasm-pack build crates/wasm --target web --release` |
+| WASM example | `cargo build --target wasm32-unknown-unknown -p froggy-jump` |

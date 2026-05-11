@@ -150,6 +150,10 @@ pub struct RigidBody {
 
     /// Sensor mode (detect overlap but skip resolution).
     pub is_sensor: bool,
+    /// Whether this body participates in the simulation at all. When `false`,
+    /// the body is skipped by gravity/integration/collision but keeps its `id`
+    /// and state. Supported way to "remove" a body without invalidating IDs.
+    pub enabled: bool,
 }
 
 impl RigidBody {
@@ -183,6 +187,7 @@ impl RigidBody {
             gravity_scale: 1.0,
             shape,
             is_sensor: false,
+            enabled: true,
         }
     }
 

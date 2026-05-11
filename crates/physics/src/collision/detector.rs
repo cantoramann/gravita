@@ -16,11 +16,15 @@ pub trait CollisionDetector: Send + Sync {
 }
 
 /// Run the narrow-phase dispatch for a pair of bodies and push the resulting
-/// contact (if any). Skips static-static pairs and sensor collisions.
+/// contact (if any). Skips static-static pairs, disabled bodies, and sensor
+/// collisions.
 fn test_pair(bodies: &[RigidBody], i: usize, j: usize, contacts: &mut Vec<Contact>) {
     let body_a = &bodies[i];
     let body_b = &bodies[j];
 
+    if !body_a.enabled || !body_b.enabled {
+        return;
+    }
     if body_a.body_type == BodyType::Static && body_b.body_type == BodyType::Static {
         return;
     }

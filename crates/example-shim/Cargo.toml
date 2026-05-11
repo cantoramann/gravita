@@ -12,5 +12,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+gravita-input = { workspace = true }
+
 pixels = { workspace = true }
 winit = { workspace = true }

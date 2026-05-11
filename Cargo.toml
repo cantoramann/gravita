@@ -4,18 +4,17 @@ members = [
     "crates/gravita",
 
     # Core crates
-    "crates/engine-core",
+    "crates/math",
     "crates/physics",
     "crates/physics-3d",
-    "crates/math",
     "crates/renderer",
+    "crates/renderer-3d",
     "crates/collections",
     "crates/input",
-    "crates/assets",
+    "crates/wasm",
 
     # Internal (publish = false)
     "crates/example-shim",
-    "crates/renderer-3d",
 
     # Examples (not published)
     "examples/bouncing-balls",
@@ -56,11 +55,9 @@ gravita-physics = { version = "0.1.0", path = "crates/physics" }
 gravita-physics-3d = { version = "0.1.0", path = "crates/physics-3d" }
 gravita-renderer = { version = "0.1.0", path = "crates/renderer" }
 gravita-collections = { version = "0.1.0", path = "crates/collections" }
-gravita-engine-core = { version = "0.1.0", path = "crates/engine-core" }
 gravita-input = { version = "0.1.0", path = "crates/input" }
-gravita-assets = { version = "0.1.0", path = "crates/assets" }
 gravita-example-shim = { path = "crates/example-shim" }
-gravita-renderer-3d = { path = "crates/renderer-3d" }
+gravita-renderer-3d = { version = "0.1.0", path = "crates/renderer-3d" }
 
 criterion = "0.5"           # Benchmarking framework (dev-only)
 pixels = "0.15"             # CPU framebuffer-to-window blitting (2D)

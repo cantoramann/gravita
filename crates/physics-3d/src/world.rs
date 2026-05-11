@@ -58,6 +58,12 @@ impl PhysicsWorld {
         &self.bodies
     }
 
+    /// Immutable body by id.
+    #[must_use]
+    pub fn body(&self, id: usize) -> Option<&RigidBody> {
+        self.bodies.get(id)
+    }
+
     /// Mutable body by id.
     pub fn body_mut(&mut self, id: usize) -> Option<&mut RigidBody> {
         self.bodies.get_mut(id)
@@ -66,6 +72,27 @@ impl PhysicsWorld {
     /// Set the world's linear gravity acceleration.
     pub fn set_gravity(&mut self, gravity: Vec3) {
         self.gravity = gravity;
+    }
+
+    /// Disable a body so it is skipped by gravity, integration, and
+    /// collision detection. Body and its `id` stay in place.
+    pub fn disable_body(&mut self, id: usize) {
+        if let Some(body) = self.bodies.get_mut(id) {
+            body.enabled = false;
+        }
+    }
+
+    /// Re-enable a previously disabled body.
+    pub fn enable_body(&mut self, id: usize) {
+        if let Some(body) = self.bodies.get_mut(id) {
+            body.enabled = true;
+        }
+    }
+
+    /// `true` if the body is enabled.
+    #[must_use]
+    pub fn is_body_active(&self, id: usize) -> bool {
+        self.bodies.get(id).is_some_and(|body| body.enabled)
     }
 
     /// Step the simulation by `dt` seconds.
@@ -81,7 +108,9 @@ impl PhysicsWorld {
         self.apply_gravity_and_damping();
 
         for body in &mut self.bodies {
-            self.integrator.integrate_velocity(body, dt);
+            if body.enabled {
+                self.integrator.integrate_velocity(body, dt);
+            }
         }
 
         self.contacts.clear();
@@ -95,7 +124,9 @@ impl PhysicsWorld {
         }
 
         for body in &mut self.bodies {
-            self.integrator.integrate_position(body, dt);
+            if body.enabled {
+                self.integrator.integrate_position(body, dt);
+            }
         }
 
         for contact in &contacts {
@@ -108,7 +139,7 @@ impl PhysicsWorld {
 
     fn apply_gravity_and_damping(&mut self) {
         for body in &mut self.bodies {
-            if body.body_type() != BodyType::Dynamic {
+            if !body.enabled || body.body_type() != BodyType::Dynamic {
                 continue;
             }
             body.force_accumulator += self.gravity * body.mass() * body.gravity_scale;
@@ -121,7 +152,7 @@ impl PhysicsWorld {
         let lin_sq = self.sleep_threshold * self.sleep_threshold;
         let ang_sq = self.sleep_threshold * self.sleep_threshold;
         for body in &mut self.bodies {
-            if body.body_type() != BodyType::Dynamic {
+            if !body.enabled || body.body_type() != BodyType::Dynamic {
                 continue;
             }
             if body.velocity.length_squared() < lin_sq

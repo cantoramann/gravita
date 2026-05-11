@@ -59,7 +59,7 @@ impl PhysicsWorld {
 
     /// Get collision events from the last physics step.
     /// These are cleared at the start of each step.
-    pub fn get_collision_events(&self) -> &[CollisionEvent] {
+    pub fn collision_events(&self) -> &[CollisionEvent] {
         &self.collision_events
     }
 
@@ -82,41 +82,39 @@ impl PhysicsWorld {
     }
 
     /// Read-only slice of all bodies currently in the world.
-    pub fn get_bodies(&self) -> &[RigidBody] {
+    pub fn bodies(&self) -> &[RigidBody] {
         &self.bodies
     }
 
     /// Get an immutable reference to a body by id.
-    pub fn get_body(&self, id: usize) -> Option<&RigidBody> {
+    pub fn body(&self, id: usize) -> Option<&RigidBody> {
         self.bodies.get(id)
     }
 
     /// Get a mutable reference to a body by id.
-    pub fn get_body_mut(&mut self, id: usize) -> Option<&mut RigidBody> {
+    pub fn body_mut(&mut self, id: usize) -> Option<&mut RigidBody> {
         self.bodies.get_mut(id)
     }
 
-    /// Mark a body for removal. The body will be disabled immediately
-    /// (moved off-screen and made static) but not actually removed from
-    /// the array to preserve indices.
-    ///
-    /// For games that need to spawn/despawn many bodies, consider using
-    /// an object pool pattern instead.
+    /// Disable a body so it is skipped by gravity, integration, and
+    /// collision detection. The body stays in the world (preserving its
+    /// `id`) and can be re-enabled later via [`enable_body`](Self::enable_body).
     pub fn disable_body(&mut self, id: usize) {
         if let Some(body) = self.bodies.get_mut(id) {
-            body.set_body_type(BodyType::Static);
-            body.position = Vec2::new(-10000.0, -10000.0);
-            body.velocity = Vec2::ZERO;
-            body.angular_velocity = 0.0;
-            body.is_sensor = true;
+            body.enabled = false;
         }
     }
 
-    /// Check if a body is currently active (not disabled).
+    /// Re-enable a previously disabled body.
+    pub fn enable_body(&mut self, id: usize) {
+        if let Some(body) = self.bodies.get_mut(id) {
+            body.enabled = true;
+        }
+    }
+
+    /// `true` if the body is enabled (the default for newly-added bodies).
     pub fn is_body_active(&self, id: usize) -> bool {
-        self.bodies
-            .get(id)
-            .is_some_and(|body| body.position.x > -5000.0) // Simple heuristic
+        self.bodies.get(id).is_some_and(|body| body.enabled)
     }
 
     /// Advance the simulation by `dt` seconds using a fixed pipeline:
@@ -138,46 +136,54 @@ impl PhysicsWorld {
 
         self.apply_gravity_and_damping();
 
-        // Integrate velocities
+        // Integrate velocities (skip disabled bodies).
         for body in &mut self.bodies {
-            if body.body_type == BodyType::Dynamic {
+            if body.enabled && body.body_type == BodyType::Dynamic {
                 self.integrator.integrate_velocity(body, dt);
             }
         }
 
-        // Detect collisions
         self.contacts.clear();
         self.collision_events.clear();
         self.collision_detector
             .detect(&self.bodies, &mut self.contacts);
 
-        // Take contacts out so we can mutably borrow bodies and contacts at the same time
+        // Take contacts out so we can mutably borrow bodies and contacts at the same time.
         let mut contacts = std::mem::take(&mut self.contacts);
 
-        // Solve constraints (velocity)
-        // On first iteration, record collision events with impulse data
-        for iteration in 0..self.velocity_iterations {
-            for contact in &mut contacts {
-                let impulse = Self::solve_velocity_constraint(&mut self.bodies, contact);
+        // Capture pre-solve relative velocity along the contact normal so the
+        // emitted `CollisionEvent` reports the impact magnitude that game logic
+        // actually wants (damage scaling, sound).
+        let pre_solve_rv: Vec<f32> = contacts
+            .iter()
+            .map(|c| {
+                let a = &self.bodies[c.body_a];
+                let b = &self.bodies[c.body_b];
+                let va = a.get_velocity_at_point(c.point);
+                let vb = b.get_velocity_at_point(c.point);
+                (vb - va).dot(c.normal)
+            })
+            .collect();
 
-                // Record collision event on first iteration (when impulse is calculated)
+        for iteration in 0..self.velocity_iterations {
+            for (idx, contact) in contacts.iter_mut().enumerate() {
+                let impulse = Self::solve_velocity_constraint(&mut self.bodies, contact);
                 if iteration == 0 && impulse > 0.0 {
-                    let event = CollisionEvent {
+                    self.collision_events.push(CollisionEvent {
                         body_a: contact.body_a,
                         body_b: contact.body_b,
                         point: contact.point,
                         normal: contact.normal,
-                        relative_velocity: 0.0, // Already resolved by this point
+                        relative_velocity: pre_solve_rv[idx],
                         impulse_magnitude: impulse,
-                    };
-                    self.collision_events.push(event);
+                    });
                 }
             }
         }
 
-        // Integrate positions
+        // Integrate positions (skip disabled bodies).
         for body in &mut self.bodies {
-            if body.body_type == BodyType::Dynamic {
+            if body.enabled && body.body_type == BodyType::Dynamic {
                 self.integrator.integrate_position(body, dt);
             }
         }
@@ -200,12 +206,13 @@ impl PhysicsWorld {
         self.apply_sleeping();
     }
 
-    /// Single pass over dynamic bodies that applies gravity, linear damping
-    /// (treated as a drag force), and angular damping. Writes directly to the
-    /// accumulators to skip the redundant body-type check `apply_force` does.
+    /// Single pass over enabled, dynamic bodies that applies gravity, linear
+    /// damping (treated as a drag force), and angular damping. Writes
+    /// directly to the accumulators to skip the redundant body-type check
+    /// `apply_force` does.
     fn apply_gravity_and_damping(&mut self) {
         for body in &mut self.bodies {
-            if body.body_type != BodyType::Dynamic {
+            if !body.enabled || body.body_type != BodyType::Dynamic {
                 continue;
             }
             body.force_accumulator += self.gravity * body.mass * body.gravity_scale;
@@ -427,7 +434,7 @@ mod tests {
     #[test]
     fn new_world_is_empty() {
         let world = PhysicsWorld::new();
-        assert!(world.get_bodies().is_empty());
+        assert!(world.bodies().is_empty());
     }
 
     #[test]
@@ -438,7 +445,7 @@ mod tests {
         let mut world = world;
         let id = world.add_body(RigidBody::new(0, circle_shape(10.0)));
         world.step(1.0);
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         // Body should have moved downward
         assert!(body.position.y < 0.0);
     }
@@ -463,7 +470,7 @@ mod tests {
         let mut world = PhysicsWorld::new();
         let body = RigidBody::new(0, circle_shape(10.0)).with_position(Vec2::new(100.0, 200.0));
         let id = world.add_body(body);
-        let retrieved = world.get_body(id).unwrap();
+        let retrieved = world.body(id).unwrap();
         assert_eq!(retrieved.position, Vec2::new(100.0, 200.0));
     }
 
@@ -471,24 +478,38 @@ mod tests {
     fn get_body_mut_allows_modification() {
         let mut world = PhysicsWorld::new();
         let id = world.add_body(RigidBody::new(0, circle_shape(10.0)));
-        world.get_body_mut(id).unwrap().restitution = 0.8;
-        assert_eq!(world.get_body(id).unwrap().restitution, 0.8);
+        world.body_mut(id).unwrap().restitution = 0.8;
+        assert_eq!(world.body(id).unwrap().restitution, 0.8);
     }
 
     #[test]
     fn get_nonexistent_body_returns_none() {
         let world = PhysicsWorld::new();
-        assert!(world.get_body(999).is_none());
+        assert!(world.body(999).is_none());
     }
 
     #[test]
-    fn disable_body_moves_offscreen() {
+    fn disable_body_clears_enabled_flag() {
         let mut world = PhysicsWorld::new();
         let id = world
             .add_body(RigidBody::new(0, circle_shape(10.0)).with_position(Vec2::new(100.0, 100.0)));
+        assert!(world.is_body_active(id));
         world.disable_body(id);
-        let body = world.get_body(id).unwrap();
-        assert!(body.position.x < -5000.0);
+        assert!(!world.is_body_active(id));
+        let body = world.body(id).unwrap();
+        // Body stays in place (no magic offscreen heuristic anymore).
+        assert_eq!(body.position, Vec2::new(100.0, 100.0));
+        assert!(!body.enabled);
+    }
+
+    #[test]
+    fn enable_body_after_disable() {
+        let mut world = PhysicsWorld::new();
+        let id = world.add_body(RigidBody::new(0, circle_shape(10.0)));
+        world.disable_body(id);
+        assert!(!world.is_body_active(id));
+        world.enable_body(id);
+        assert!(world.is_body_active(id));
     }
 
     #[test]
@@ -510,7 +531,7 @@ mod tests {
         world.set_gravity(Vec2::new(0.0, -100.0));
         let id = world.add_body(RigidBody::new(0, circle_shape(10.0)));
         world.step(1.0);
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         // With stronger gravity, body should fall faster
         assert!(body.velocity.y < -50.0);
     }
@@ -521,7 +542,7 @@ mod tests {
         world.set_gravity(Vec2::ZERO);
         let id = world.add_body(RigidBody::new(0, circle_shape(10.0)));
         world.step(1.0);
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         // With zero gravity and no initial velocity, body stays put (almost)
         assert!(body.position.y.abs() < 1.0);
     }
@@ -536,7 +557,7 @@ mod tests {
                 .with_position(Vec2::new(0.0, 100.0)),
         );
         world.step(1.0);
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         assert_eq!(body.position, Vec2::new(0.0, 100.0));
     }
 
@@ -562,7 +583,7 @@ mod tests {
         );
 
         world.step(0.016);
-        let events = world.get_collision_events();
+        let events = world.collision_events();
         assert!(!events.is_empty());
     }
 
@@ -585,7 +606,7 @@ mod tests {
         world.step(0.016);
         let events = world.drain_collision_events();
         assert!(!events.is_empty());
-        assert!(world.get_collision_events().is_empty());
+        assert!(world.collision_events().is_empty());
     }
 
     // =========================================================================
@@ -602,7 +623,7 @@ mod tests {
                 .with_velocity(Vec2::new(100.0, 0.0)),
         );
         world.step(0.1);
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         // Should have moved approximately 10 units (100 * 0.1, minus damping)
         assert!(body.position.x > 5.0);
     }
@@ -617,7 +638,7 @@ mod tests {
                 .with_position(Vec2::new(0.0, 100.0)),
         );
         world.step(1.0);
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         assert_eq!(body.position.y, 100.0);
     }
 
@@ -651,8 +672,8 @@ mod tests {
             world.step(0.016);
         }
 
-        let body1 = world.get_body(id1).unwrap();
-        let body2 = world.get_body(id2).unwrap();
+        let body1 = world.body(id1).unwrap();
+        let body2 = world.body(id2).unwrap();
 
         // Bodies should have reversed direction (or close to it)
         assert!(body1.velocity.x < 0.0);
@@ -683,7 +704,7 @@ mod tests {
             world.step(0.016);
         }
 
-        let ball = world.get_body(ball_id).unwrap();
+        let ball = world.body(ball_id).unwrap();
         // Ball should have come to rest on the floor
         assert!(ball.velocity.y.abs() < 1.0);
         // Ball should be near the floor (y ~ 10 + 10 = 20, accounting for floor height)
@@ -709,7 +730,7 @@ mod tests {
         world.sleep_threshold = 0.01;
         world.step(0.016);
 
-        let body = world.get_body(id).unwrap();
+        let body = world.body(id).unwrap();
         // Very slow body should be zeroed out
         assert_eq!(body.velocity, Vec2::ZERO);
     }

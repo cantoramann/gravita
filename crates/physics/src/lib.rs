@@ -58,7 +58,7 @@
 //! After each step, you can query collision events for game logic:
 //!
 //! ```ignore
-//! for event in world.get_collision_events() {
+//! for event in world.collision_events() {
 //!     if event.impulse_magnitude > 100.0 {
 //!         // Play impact sound, deal damage, etc.
 //!     }

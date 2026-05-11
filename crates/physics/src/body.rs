@@ -152,6 +152,13 @@ pub struct RigidBody {
     // Constraints
     /// If true, detects collisions but doesn't respond physically.
     pub is_sensor: bool,
+    /// Whether this body participates in the simulation at all.
+    ///
+    /// When `false`, the body is skipped entirely by gravity, integration,
+    /// and collision detection — without changing its `body_type` or position.
+    /// This is the supported way to "remove" a body without invalidating IDs:
+    /// flip `enabled = false`, and later flip it back if needed.
+    pub enabled: bool,
     /// If true, prevents rotation from physics forces. Use
     /// [`set_fixed_rotation`](Self::set_fixed_rotation) to flip it after
     /// construction.
@@ -197,6 +204,7 @@ impl RigidBody {
             gravity_scale: 1.0,
             shape,
             is_sensor: false,
+            enabled: true,
             fixed_rotation: false,
         }
     }

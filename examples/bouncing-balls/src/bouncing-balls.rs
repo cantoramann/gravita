@@ -123,7 +123,7 @@ impl App for Demo {
     fn render(&self, frame: &mut [u8]) {
         clear(frame, palette::DARK_BLUE_BG);
 
-        for body in self.physics_world.get_bodies() {
+        for body in self.physics_world.bodies() {
             match &body.shape {
                 CollisionShape::Circle(circle) => {
                     Self::draw_body_circle(
