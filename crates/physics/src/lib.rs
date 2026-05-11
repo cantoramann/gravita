@@ -75,9 +75,12 @@ pub mod collision;
 pub mod forces;
 /// Numerical integration schemes (Euler, Verlet).
 pub mod integrator;
+/// Deterministic snapshot / restore of [`PhysicsWorld`] state.
+pub mod snapshot;
 /// Physics world container and simulation stepping.
 pub mod world;
 
 pub use body::{BodyType, CollisionShape, RigidBody};
 pub use collision::{CollisionDetector, CollisionEvent, Contact};
+pub use snapshot::{Snapshot, SnapshotError};
 pub use world::PhysicsWorld;

@@ -4,6 +4,7 @@
   <img src="https://img.shields.io/badge/2D-pixels-blue" alt="2D pixels">
   <img src="https://img.shields.io/badge/3D-wgpu-purple" alt="3D wgpu">
   <img src="https://img.shields.io/badge/WASM-handwritten%20bindings-yellow" alt="WASM bindings">
+  <img src="https://img.shields.io/badge/snapshots-deterministic-green" alt="Deterministic snapshots">
 </p>
 
 # Gravita
@@ -170,6 +171,29 @@ console.log(world.bodyPosition(ball));   // Float32Array [x, y]
 
 3D works the same way — substitute `World3D` and three-component vectors. See [`crates/wasm/README.md`](crates/wasm/README.md) for the full surface.
 
+### 7. Deterministic snapshot & time-rewind
+
+Every `PhysicsWorld` can be serialized to a flat `Vec<u8>` and restored later, byte-for-byte. The step path is deterministic on a fixed binary — no `HashMap` iteration, no parallelism, no randomness — so the same input always produces the same output.
+
+```rust
+let snap = world.snapshot();           // Vec<u8> (no serde dep, no encoding overhead)
+
+for _ in 0..120 { world.step(1.0 / 60.0); }
+
+world.restore_from(&snap).unwrap();    // wind back two seconds
+```
+
+Identical surface on `gravita-physics-3d`. The WASM bindings expose them as `world.snapshot()` (returns `Uint8Array`) and `world.restoreFrom(bytes)`.
+
+What this unlocks: **lockstep multiplayer** (ship the same binary to every client, exchange inputs, save snapshots as keyframes), **time-rewind gameplay** (Braid-style — see `cargo run -p snapshot-replay` and hold `R`), **replay-based debugging** (capture the bytes that triggered a bug, restore + step under a debugger), **RL/sim training** (snapshot the starting state once, fork it for thousands of rollouts).
+
+Try it:
+
+```bash
+cargo run -p snapshot-replay
+# Click anywhere to spawn balls. Hold R to rewind the last two seconds.
+```
+
 ---
 
 ## Repo layout
@@ -195,7 +219,8 @@ gravita/
 │   ├── tetris/            # 2D classic game
 │   ├── froggy-jump/       # 2D + WASM
 │   ├── cube-3d/           # 3D spinning cube
-│   └── spheres-3d/        # 3D bouncing-spheres
+│   ├── spheres-3d/        # 3D bouncing-spheres
+│   └── snapshot-replay/   # Time-rewind via deterministic snapshots
 ├── ARCHITECTURE.md        # System map + per-frame dataflow
 ├── CLAUDE.md              # Onboarding notes for Claude Code and other AI agents
 ├── CONTRIBUTING.md        # How to contribute

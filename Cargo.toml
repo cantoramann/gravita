@@ -25,6 +25,7 @@ members = [
     "examples/froggy-jump",
     "examples/cube-3d",
     "examples/spheres-3d",
+    "examples/snapshot-replay",
 ]
 resolver = "2"
 

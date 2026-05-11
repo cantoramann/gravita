@@ -29,6 +29,8 @@ pub mod broad_phase;
 pub mod collision;
 /// Numerical integrators with quaternion-based rotation.
 pub mod integrator;
+/// Deterministic snapshot / restore of [`PhysicsWorld`] state.
+pub mod snapshot;
 /// Physics world container.
 pub mod world;
 
@@ -36,4 +38,5 @@ pub use body::{BodyType, CollisionShape, RigidBody};
 pub use broad_phase::{BroadPhase, SpatialHashGrid};
 pub use collision::{Contact, SimpleCollisionDetector, SpatialHashDetector};
 pub use integrator::{Integrator, SemiImplicitEuler};
+pub use snapshot::{Snapshot, SnapshotError};
 pub use world::PhysicsWorld;

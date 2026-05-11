@@ -31,7 +31,8 @@ examples/
 ├── tetris/            # 2D classic
 ├── froggy-jump/       # 2D + WASM
 ├── cube-3d/           # 3D smoke test for renderer
-└── spheres-3d/        # 3D physics-3d + renderer-3d together
+├── spheres-3d/        # 3D physics-3d + renderer-3d together
+└── snapshot-replay/   # 2D time-rewind demo for the snapshot/restore API
 ```
 
 ---
@@ -94,6 +95,12 @@ When adding new fields, classify them into one of these three categories before 
 - Quaternion convention: `(x, y, z, w)` with `w` scalar. Hamilton product: `self * other` applies `other` then `self`.
 - All collision normals point **from `body_a` toward `body_b`**.
 
+### Determinism
+
+Both `PhysicsWorld::step()`s are bit-exact deterministic on a fixed binary: no `HashMap` iteration in the step path, no parallel solver, no random. The `snapshot()` byte buffer is a faithful round-trip, and the snapshot tests in [`crates/physics/src/snapshot.rs`](crates/physics/src/snapshot.rs) + [`crates/physics-3d/src/snapshot.rs`](crates/physics-3d/src/snapshot.rs) assert that determinism after 200 steps on a busy scene.
+
+When adding solver code, **don't introduce HashMap iteration, parallelism, or anything that depends on allocator addresses**. If a new feature genuinely needs one of those, gate it behind a non-default feature flag so the deterministic path stays intact.
+
 ---
 
 ## Performance gotchas
@@ -132,6 +139,8 @@ When adding new fields, classify them into one of these three categories before 
 | 3D example runner (`App3D` trait) | [`crates/renderer-3d/src/runner.rs`](crates/renderer-3d/src/runner.rs) |
 | Shared input state | [`crates/input/src/lib.rs`](crates/input/src/lib.rs) |
 | WASM bindings (handwritten) | [`crates/wasm/src/lib.rs`](crates/wasm/src/lib.rs) |
+| 2D snapshot / restore | [`crates/physics/src/snapshot.rs`](crates/physics/src/snapshot.rs) |
+| 3D snapshot / restore | [`crates/physics-3d/src/snapshot.rs`](crates/physics-3d/src/snapshot.rs) |
 
 ---
 

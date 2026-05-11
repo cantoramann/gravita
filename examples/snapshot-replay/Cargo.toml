@@ -1,0 +1,16 @@
+# examples/snapshot-replay/Cargo.toml
+[package]
+name = "snapshot-replay"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+gravita-physics = { workspace = true }
+gravita-math = { workspace = true }
+gravita-renderer = { workspace = true }
+gravita-example-shim = { workspace = true }
+
+[[bin]]
+name = "snapshot-replay"
+path = "src/main.rs"

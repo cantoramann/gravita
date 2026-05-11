@@ -73,6 +73,20 @@ impl PhysicsWorld {
         self.gravity = gravity;
     }
 
+    /// Current global gravity acceleration.
+    #[must_use]
+    pub fn gravity(&self) -> Vec2 {
+        self.gravity
+    }
+
+    /// Replace the body list wholesale. Used by [`crate::snapshot`] when
+    /// restoring; not part of the public surface for regular gameplay code.
+    pub(crate) fn replace_bodies(&mut self, bodies: Vec<RigidBody>) {
+        self.bodies = bodies;
+        self.contacts.clear();
+        self.collision_events.clear();
+    }
+
     /// Add a body to the world and return its assigned id.
     pub fn add_body(&mut self, mut body: RigidBody) -> usize {
         body.id = self.bodies.len();

@@ -42,11 +42,11 @@
 use gravita_math::{Aabb, Aabb3, Circle, Sphere, Vec2, Vec3};
 use gravita_physics::{
     BodyType as BodyType2D, CollisionShape as Shape2D, PhysicsWorld as World2DInner,
-    RigidBody as Body2D,
+    RigidBody as Body2D, Snapshot as Snapshot2D,
 };
 use gravita_physics_3d::{
     BodyType as BodyType3D, CollisionShape as Shape3D, PhysicsWorld as World3DInner,
-    RigidBody as Body3D,
+    RigidBody as Body3D, Snapshot as Snapshot3D,
 };
 use wasm_bindgen::prelude::*;
 
@@ -225,6 +225,24 @@ impl World2D {
         }
         copy_f32(&out)
     }
+
+    /// Serialize the world state into a `Uint8Array`.
+    ///
+    /// Bit-stable across runs of the same compiled binary. Save the bytes to
+    /// disk for replays, or pass them straight into [`World2D::restoreFrom`]
+    /// to rewind the world.
+    pub fn snapshot(&self) -> js_sys::Uint8Array {
+        copy_u8(self.inner.snapshot().as_bytes())
+    }
+
+    /// Restore the world to the state captured by `bytes`. Throws on a
+    /// malformed buffer.
+    pub fn restoreFrom(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
+        let snap = Snapshot2D::from_bytes(bytes.to_vec());
+        self.inner
+            .restore_from(&snap)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -364,10 +382,32 @@ impl World3D {
         }
         copy_f32(&out)
     }
+
+    /// Serialize the world state into a `Uint8Array`.
+    ///
+    /// Bit-stable across runs of the same compiled binary.
+    pub fn snapshot(&self) -> js_sys::Uint8Array {
+        copy_u8(self.inner.snapshot().as_bytes())
+    }
+
+    /// Restore the world to the state captured by `bytes`. Throws on a
+    /// malformed buffer.
+    pub fn restoreFrom(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
+        let snap = Snapshot3D::from_bytes(bytes.to_vec());
+        self.inner
+            .restore_from(&snap)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
 }
 
 fn copy_f32(slice: &[f32]) -> js_sys::Float32Array {
     let arr = js_sys::Float32Array::new_with_length(slice.len() as u32);
+    arr.copy_from(slice);
+    arr
+}
+
+fn copy_u8(slice: &[u8]) -> js_sys::Uint8Array {
+    let arr = js_sys::Uint8Array::new_with_length(slice.len() as u32);
     arr.copy_from(slice);
     arr
 }

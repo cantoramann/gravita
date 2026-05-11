@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2026-05-10
+
+Deterministic snapshot / restore for `PhysicsWorld` (both 2D and 3D). Purely additive.
+
+### Added
+
+- `PhysicsWorld::snapshot() -> Snapshot` and `restore_from(&Snapshot)` on `gravita-physics` and `gravita-physics-3d`. Hand-rolled little-endian binary format with `GR2D` / `GR3D` magic and a version field. No serde dependency. Round-trips every dynamics field bit-for-bit.
+- `Snapshot` type with `as_bytes()`, `into_bytes()`, `from_bytes(Vec<u8>)`. `Vec<u8>` round-trips so users can persist replays to disk.
+- `SnapshotError` enum (`Truncated`, `BadMagic`, `UnsupportedVersion`, `BadTag`) with `std::error::Error` + `Display` impls.
+- `World2D::snapshot()` / `restoreFrom(bytes)` on `gravita-wasm` (and 3D peer). Returns `Uint8Array`, accepts `Uint8Array`. Throws a `JsValue` string on malformed input.
+- New example: [`examples/snapshot-replay`](examples/snapshot-replay). Hold `R` to rewind two seconds; click to spawn balls. Demonstrates the snapshot ring-buffer pattern used in Braid-style time-rewind gameplay.
+- `PhysicsWorld::gravity()` accessor on both 2D and 3D worlds (was already settable; the getter is new).
+
+### Determinism guarantee
+
+`PhysicsWorld::step()` is bit-exact deterministic on a fixed compiled binary: no `HashMap` iteration in the step path, no parallel solver, no random. Tests in [`crates/physics/src/snapshot.rs`](crates/physics/src/snapshot.rs) and [`crates/physics-3d/src/snapshot.rs`](crates/physics-3d/src/snapshot.rs) run a busy scene for 200 steps from two identical seeds and assert byte-equal final snapshots, plus assert that a mid-sim restore continues an identical trajectory.
+
+Cross-platform determinism (e.g. across x86 / ARM / wasm32 hardware FMA) is not currently guaranteed — `f32::mul_add` is platform-dependent. For lockstep multiplayer, ship the same compiled binary to every client.
+
+---
+
 ## [0.2.0] - 2026-05-10
 
 A 3D-and-WASM release. The engine now has parallel 2D and 3D pipelines on top of a shared `gravita-math`, plus a handwritten JavaScript surface so the same physics runs in the browser without anyone touching Rust.
@@ -142,5 +163,6 @@ A 3D-and-WASM release. The engine now has parallel 2D and 3D pipelines on top of
 
 ---
 
+[0.2.1]: https://github.com/cantoramann/gravita/releases/tag/v0.2.1
 [0.2.0]: https://github.com/cantoramann/gravita/releases/tag/v0.2.0
 [0.1.0]: https://github.com/cantoramann/gravita/releases/tag/v0.1.0

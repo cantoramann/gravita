@@ -74,6 +74,19 @@ impl PhysicsWorld {
         self.gravity = gravity;
     }
 
+    /// Current global gravity acceleration.
+    #[must_use]
+    pub fn gravity(&self) -> Vec3 {
+        self.gravity
+    }
+
+    /// Replace the body list wholesale. Used by [`crate::snapshot`] when
+    /// restoring; not part of the public surface for regular gameplay code.
+    pub(crate) fn replace_bodies(&mut self, bodies: Vec<RigidBody>) {
+        self.bodies = bodies;
+        self.contacts.clear();
+    }
+
     /// Disable a body so it is skipped by gravity, integration, and
     /// collision detection. Body and its `id` stay in place.
     pub fn disable_body(&mut self, id: usize) {

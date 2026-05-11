@@ -78,6 +78,8 @@ console.log(world.bodyRotation(ball)); // Float32Array [qx, qy, qz, qw]
 - `disableBody(id)` / `enableBody(id)`
 - `bodyCount()` → `number`
 - `allPositions()` → `Float32Array [x0, y0, x1, y1, …]` — one bridge call to read every body's position
+- `snapshot()` → `Uint8Array` — full simulation state. Bit-stable across runs of the same binary.
+- `restoreFrom(bytes)` — restore from a previously captured `Uint8Array`. Throws on malformed input.
 
 ### `World3D`
 
@@ -87,6 +89,7 @@ Same surface as `World2D` with `[x, y, z]` vectors. Differences:
 - `addSphere(x, y, z, radius)` and `addBox(x, y, z, w, h, d)`
 - `bodyRotation(id)` returns `Float32Array [qx, qy, qz, qw]` (unit quaternion)
 - `allPositions()` returns `[x0, y0, z0, x1, y1, z1, …]`
+- `snapshot()` / `restoreFrom(bytes)` work identically to the 2D surface — the bytes are tagged `GR3D` and not interchangeable with 2D snapshots.
 
 ## Why handwritten bindings?
 
